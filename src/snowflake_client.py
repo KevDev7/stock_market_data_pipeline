@@ -49,21 +49,18 @@ class SnowflakeClient:
 
         print("✅ Connected to Snowflake successfully.")
         return conn
-
+    
     def _ensure_objects_exist(self):
-        """Ensure database tables exist: RAW.DAILY_STOCKS and ADMIN.INGESTION_CHECKPOINTS."""
+        """Ensure database tables exist in configured schema and admin schema."""
         print("Checking or creating necessary tables...")
 
-        self.cursor.execute("""
-            CREATE SCHEMA IF NOT EXISTS RAW;
-        """)
-        self.cursor.execute("""
-            CREATE SCHEMA IF NOT EXISTS ADMIN;
-        """)
+        # Create the configured schema if it doesn’t exist
+        self.cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SNOWFLAKE['schema']};")
+        self.cursor.execute("CREATE SCHEMA IF NOT EXISTS ADMIN;")  # keep for checkpoints
 
-        # Table for stock data
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS RAW.DAILY_STOCKS (
+        # --- Stock data table (created in configured schema) ---
+        self.cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SNOWFLAKE['schema']}.DAILY_STOCKS (
                 T STRING,
                 V FLOAT,
                 VW FLOAT,
@@ -72,12 +69,19 @@ class SnowflakeClient:
                 H FLOAT,
                 L FLOAT,
                 N INT,
+                TS TIMESTAMP_NTZ,
                 DATE DATE,
                 INGESTED_AT TIMESTAMP_NTZ
             );
         """)
 
-        # Table for checkpoints
+        # Self-healing safeguard (in case table exists without TS)
+        self.cursor.execute(f"""
+            ALTER TABLE {SNOWFLAKE['schema']}.DAILY_STOCKS
+            ADD COLUMN IF NOT EXISTS TS TIMESTAMP_NTZ;
+        """)
+
+        # --- Checkpoints table (still lives in ADMIN schema) ---
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS ADMIN.INGESTION_CHECKPOINTS (
                 RUN_ID STRING,
@@ -93,6 +97,7 @@ class SnowflakeClient:
 
         self.conn.commit()
         print("✅ Verified table existence.")
+
 
     def write_dataframe(self, df: pd.DataFrame, table_name: str):
         """Write a pandas DataFrame into Snowflake using write_pandas()."""
