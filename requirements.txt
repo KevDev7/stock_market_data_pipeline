@@ -1,18 +1,11 @@
-# his requirements.txt
-# pandas
-# pandas-market-calendars
-# requests
-# pyarrow
-# pyspark
-# dbt-core==1.10.11
-# dbt-bigquery==1.10.2
-
-# mine
-requests
+# ./requirements.txt
 pandas
+pandas-market-calendars
+requests
+pyarrow
+snowflake-connector-python[pandas]>=3.10,<5
+dbt-core==1.7.*
+dbt-snowflake==1.7.*
+psycopg2-binary
 pendulum
 python-dotenv
-snowflake-connector-python[pandas]>=3.10,<5
-snowflake-sqlalchemy
-pyarrow
-pandas-market-calendars

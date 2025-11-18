@@ -1,4 +1,5 @@
 # src/extraction.py
+# Fetches grouped daily aggregate data from the Polygon API with retry handling.
 
 import requests
 import pandas as pd
@@ -30,16 +31,16 @@ def fetch_grouped_daily(date_str: str) -> pd.DataFrame:
     data = _make_request_with_retry(url, params=params)
 
     if not data or "results" not in data:
-        print(f"⚠️ No data returned for {date_str}")
+        print(f"No data returned for {date_str}")
         return None
 
     df = pd.DataFrame(data["results"])
 
     if df.empty:
-        print(f"⚠️ Empty results for {date_str}")
+        print(f"Empty results for {date_str}")
         return None
 
-    print(f"✅ Successfully fetched {len(df)} records for {date_str}")
+    print(f"Successfully fetched {len(df)} records for {date_str}")
     return df
 
 
@@ -63,18 +64,18 @@ def _make_request_with_retry(url: str, params: dict, max_retries: int = 3):
             if status == 200:
                 return response.json()
             elif status == 429:
-                print("⏳ Rate limited. Waiting 60 seconds before retry...")
+                print("Rate limited. Waiting 60 seconds before retry...")
                 time.sleep(60)
             elif 500 <= status < 600:
-                print(f"💥 Server error {status}. Retrying in 5s (attempt {attempt}/{max_retries})...")
+                print(f"Server error {status}. Retrying in 5s (attempt {attempt}/{max_retries})...")
                 time.sleep(5)
             else:
-                print(f"❌ Client error {status}: {response.text[:100]}")
+                print(f"Client error {status}: {response.text[:100]}")
                 break
 
         except RequestException as e:
-            print(f"⚠️ Request failed ({attempt}/{max_retries}): {e}")
+            print(f"Request failed ({attempt}/{max_retries}): {e}")
             time.sleep(5)
 
-    print("❌ All retries exhausted. Returning None.")
+    print("All retries exhausted. Returning None.")
     return None

@@ -1,37 +1,8 @@
-# source gitignore
-
-# # secrets
-# .env
-# docker-compose.yaml
-# keys/
-# *.json
-# airflow.cfg
-
-# # Dev bloat
-# .venv
-# *.pyc
-# __pycache__/
-# tmp/
-# logs/
-# *.log
-# .vscode/
-
-# # dbt 
-# profiles.yml
-# .user.yml
-# dbt_packages/
-# package-lock.yml
-
-# #streamlit
-# .streamlit/
-# secrets.toml
-
-#----------------------------------------------------#
-
 # My gitignore
 
 # Environment & keys
 .env
+.env.*
 keys/
 *.key
 *.pem
@@ -40,12 +11,35 @@ keys/
 __pycache__/
 *.pyc
 .venv/
+*.egg-info/
 
 # Airflow
 logs/
 airflow_home/
+airflow/.pytest_cache/
+airflow/unittests.cfg
+airflow/tmp/
+airflow/postgres-data/
+
+# dbt
+dbt_packages/
+dbt_modules/
+target/
+.dbt/
+logs/
+
+# Docker
+*.log
+*.pid
+*.tar
+*.db
+*.sock
+.docker/
+**/.dockerignore
 
 # OS / Editor
 .DS_Store
 .vscode/
+.idea/
+Thumbs.db
 

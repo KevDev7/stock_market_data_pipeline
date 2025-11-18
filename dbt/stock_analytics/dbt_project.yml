@@ -1,0 +1,65 @@
+# dbt/stock_analytics/dbt_project.yml
+
+# dbt project configuration for the stock_analytics models.
+# Project Identity
+name: "stock_analytics"
+version: "1.0.0"
+config-version: 2
+
+# Which profile to use (must match profiles.yml key)
+profile: "stock_analytics"
+
+# Paths for dbt resources
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+
+# Folders removed when running `dbt clean`
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Seed Configuration
+seeds:
+  stock_analytics:
+    +schema: raw_seeds
+    +quote_columns: false
+    russell3000_2024_1231:
+      column_types: &russell_seed_types
+        Ticker: text
+        Name: text
+        Sector: text
+        Asset_Class: text
+        Market_Value: float
+        Weight: float
+        Notional_Value: float
+        Quantity: float
+        Price: float
+        Location: text
+        Exchange: text
+        Currency: text
+        FX_Rate: float
+        Market_Currency: text
+        Accrual_Date: text
+    russell3000_2025_0630:
+      column_types: *russell_seed_types
+    russell3000_2025_0829:
+      column_types: *russell_seed_types
+    russell3000_2025_0916:
+      column_types: *russell_seed_types
+
+# Model defauts
+models:
+  stock_analytics:
+    staging:
+      +schema: raw_staging
+      +materialized: view
+    intermediate:
+      +schema: raw_intermediate
+      +materialized: table
+    marts:
+      +schema: raw_marts
+      +materialized: table

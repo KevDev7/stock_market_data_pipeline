@@ -1,0 +1,31 @@
+# dbt/stock_analytics/models/intermediate/_schema.yml
+# Schema definitions for intermediate Russell 3000–enriched daily market data.
+
+version: 2
+
+models:
+  - name: int_russell3000__daily
+    description: "Daily market data enriched with Russell 3000 membership and sector info"
+    columns:
+      - name: ticker
+        description: Stock ticker symbol
+        tests:
+          - not_null
+      - name: trade_date
+        description: Trading date
+        tests:
+          - not_null
+      - name: company
+        description: Company name from Russell 3000 constituent data
+      - name: sector
+        description: GICS sector classification
+      - name: index_weight
+        description: Index weight (% of Russell 3000)
+      - name: consecutive_trading_days
+        description: Running count of days the ticker appears
+      - name: yesterday_close
+        description: Previous trading day’s close
+      - name: is_new_to_index
+        description: Binary flag indicating if stock just entered the index
+
+

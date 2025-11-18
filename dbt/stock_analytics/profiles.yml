@@ -1,0 +1,18 @@
+# dbt/stock_analytics/profiles.yml
+
+# dbt profile for local development against Snowflake
+stock_analytics:        # matches the profile name in dbt_project.yml
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      schema: "{{ env_var('SNOWFLAKE_SCHEMA') }}"
+      threads: 4
+      client_session_keep_alive: false
+      authenticator: snowflake
+      private_key_path: "{{ env_var('PRIVATE_KEY_PATH') }}"

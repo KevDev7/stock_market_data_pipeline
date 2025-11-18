@@ -1,4 +1,5 @@
 # src/snowflake_client.py
+# Manages Snowflake connections, table creation, data writes, and ingestion checkpoints.
 
 import pandas as pd
 import pendulum
@@ -47,7 +48,7 @@ class SnowflakeClient:
         else:
             raise FileNotFoundError(f"Private key not found: {private_key_path}")
 
-        print("✅ Connected to Snowflake successfully.")
+        print("Connected to Snowflake successfully.")
         return conn
     
     def _ensure_objects_exist(self):
@@ -58,7 +59,7 @@ class SnowflakeClient:
         self.cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SNOWFLAKE['schema']};")
         self.cursor.execute("CREATE SCHEMA IF NOT EXISTS ADMIN;")  # keep for checkpoints
 
-        # --- Stock data table (created in configured schema) ---
+        # Stock data table (created in configured schema)
         self.cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {SNOWFLAKE['schema']}.DAILY_STOCKS (
                 T STRING,
@@ -81,7 +82,7 @@ class SnowflakeClient:
             ADD COLUMN IF NOT EXISTS TS TIMESTAMP_NTZ;
         """)
 
-        # --- Checkpoints table (still lives in ADMIN schema) ---
+        # Checkpoints table (still lives in ADMIN schema)
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS ADMIN.INGESTION_CHECKPOINTS (
                 RUN_ID STRING,
@@ -96,13 +97,13 @@ class SnowflakeClient:
         """)
 
         self.conn.commit()
-        print("✅ Verified table existence.")
+        print("Verified table existence.")
 
 
     def write_dataframe(self, df: pd.DataFrame, table_name: str):
         """Write a pandas DataFrame into Snowflake using write_pandas()."""
         if df is None or df.empty:
-            print("⚠️ DataFrame is empty; skipping load.")
+            print("DataFrame is empty; skipping load.")
             return False, 0
 
         success, nchunks, nrows, _ = write_pandas(
@@ -111,14 +112,15 @@ class SnowflakeClient:
             table_name=table_name,
             database=SNOWFLAKE["database"],
             schema=SNOWFLAKE["schema"],
-            quote_identifiers=False
+            quote_identifiers=False,
+            use_logical_type=True
         )
 
         if success:
-            print(f"✅ Successfully loaded {nrows} rows into {table_name}.")
+            print(f"Successfully loaded {nrows} rows into {table_name}.")
             return True, nrows
         else:
-            print(f"❌ Failed to load data into {table_name}.")
+            print(f"Failed to load data into {table_name}.")
             return False, 0
 
     def record_checkpoint(self, run_id, api_date, status, total_tickers=None,
@@ -139,7 +141,7 @@ class SnowflakeClient:
             rows_inserted, started_at, completed_at, error_message
         ))
         self.conn.commit()
-        print(f"🪵 Checkpoint recorded for {api_date} — {status}")
+        print(f"Checkpoint recorded for {api_date} — {status}")
 
     def get_completed_dates(self):
         """Return all API_DATE values where status='completed'."""
@@ -156,50 +158,12 @@ class SnowflakeClient:
         except Exception as e:
             print(f"Error reading checkpoint table: {e}")
             return set()
-        
-    # --------------------------------------------------------------------
-    # 🚧 For Phase 3+ (Airflow Monitoring / Analytics)
-    # --------------------------------------------------------------------
-    # def get_ingestion_stats(self):
-    #     """
-    #     Summarize ingestion stats for Airflow dashboards or monitoring.
-    #     Returns:
-    #         dict: counts, totals, averages, and failed runs summary.
-    #     """
-    #     query = """
-    #         SELECT
-    #             COUNT(DISTINCT API_DATE) AS DAYS_PROCESSED,
-    #             SUM(ROWS_INSERTED) AS TOTAL_ROWS,
-    #             AVG(TOTAL_TICKERS) AS AVG_TICKERS_PER_DAY,
-    #             MIN(API_DATE) AS EARLIEST_DATE,
-    #             MAX(API_DATE) AS LATEST_DATE,
-    #             COUNT_IF(STATUS = 'failed') AS FAILED_RUNS
-    #         FROM ADMIN.INGESTION_CHECKPOINTS
-    #         WHERE STATUS = 'completed'
-    #     """
-    #
-    #     try:
-    #         self.cursor.execute(query)
-    #         result = self.cursor.fetchone()
-    #         return {
-    #             "days_processed": result[0],
-    #             "total_rows": result[1],
-    #             "avg_tickers_per_day": result[2],
-    #             "earliest_date": result[3],
-    #             "latest_date": result[4],
-    #             "failed_runs": result[5],
-    #         }
-    #     except Exception as e:
-    #         print(f"Error getting ingestion stats: {e}")
-    #         return None
-    #
-    # --------------------------------------------------------------------
 
     def close(self):
         """Close Snowflake connection."""
         try:
             self.cursor.close()
             self.conn.close()
-            print("🔒 Connection closed.")
+            print("Connection closed.")
         except Exception:
             pass

@@ -1,0 +1,13 @@
+# dbt/stock_analytics/models/staging/_src_daily_stocks.yml
+# Source definitions for raw Polygon daily stock data.
+
+version: 2
+
+sources:
+  - name: raw_market
+    description: "Raw layer in Snowflake containing Polygon daily stock data"
+    database: MARKET
+    schema: RAW
+    tables:
+      - name: DAILY_STOCKS
+        description: "Raw table populated by the Polygon → Snowflake ELT pipeline"

@@ -1,0 +1,6 @@
+# Ignore dbt dependencies and cache
+dbt_packages/
+dbt_modules/
+target/
+logs/
+.dbt/

@@ -1,0 +1,30 @@
+# dbt/stock_analytics/models/marts/_schema.yml
+# Schema definitions for trading momentum fact table with technical indicators.
+
+version: 2
+
+models:
+  - name: fct_trading_momentum
+    description: "Daily trading and technical indicators for Russell 3000 constituents."
+    columns:
+      - name: ticker
+        description: Stock ticker
+        tests:
+          - not_null
+      - name: trade_date
+        description: Trading date
+        tests:
+          - not_null
+      - name: close
+        description: Closing price
+      - name: sma_20
+        description: 20-day simple moving average
+      - name: sma_50
+        description: 50-day simple moving average
+      - name: sma_200
+        description: 200-day simple moving average
+      - name: rsi
+        description: 14-day Relative Strength Index
+    tests:
+      - unique:
+          column_name: "CONCAT(ticker, '-', CAST(trade_date AS STRING))"
