@@ -1,4 +1,5 @@
 -- Builds daily market data enriched with Russell 3000 attributes (incremental model).
+
 {{ config(
     materialized = 'incremental',
     unique_key = ['ticker', 'trade_date'],
@@ -6,7 +7,8 @@
 ) }}
 
 WITH russell_3000 AS (
-    SELECT * FROM {{ ref('stg_russell3000__constituents') }}
+    SELECT *
+    FROM {{ ref('stg_russell3000__constituents') }}
 ),
 
 full_market AS (
@@ -14,7 +16,8 @@ full_market AS (
     FROM {{ ref('stg_daily_stocks') }}
     {% if is_incremental() %}
         WHERE trade_date >= (
-            SELECT DATEADD(day, -4, MAX(trade_date)) FROM {{ this }}
+            SELECT DATEADD(day, -4, MAX(trade_date))
+            FROM {{ this }}
         )
     {% endif %}
 ),
@@ -40,25 +43,58 @@ joined AS (
     INNER JOIN russell_3000 AS r
         ON f.ticker = r.ticker
         AND f.trade_date BETWEEN r.valid_from AND r.valid_to
-)
+),
 
-, final AS (
+{% if is_incremental() %}
+prev_day_close AS (
+    SELECT
+        ticker,
+        trade_date,
+        close AS prev_close
+    FROM {{ this }}
+),
+{% endif %}
+
+final AS (
     SELECT
         j.*,
+
         ROW_NUMBER() OVER (
             PARTITION BY j.ticker
             ORDER BY j.trade_date
         ) AS consecutive_trading_days,
+
+        {% if is_incremental() %}
+        COALESCE(
+            LAG(j.close) OVER (
+                PARTITION BY j.ticker
+                ORDER BY j.trade_date
+            ),
+            p.prev_close
+        ) AS yesterday_close,
+        {% else %}
         LAG(j.close) OVER (
             PARTITION BY j.ticker
             ORDER BY j.trade_date
         ) AS yesterday_close,
+        {% endif %}
+
         CASE 
-            WHEN LAG(j.ticker) OVER (PARTITION BY j.ticker ORDER BY j.trade_date) IS NULL 
+            WHEN LAG(j.ticker) OVER (
+                PARTITION BY j.ticker
+                ORDER BY j.trade_date
+            ) IS NULL 
             THEN 1 
             ELSE 0 
         END AS is_new_to_index
+
     FROM joined AS j
+
+    {% if is_incremental() %}
+    LEFT JOIN prev_day_close AS p
+        ON j.ticker = p.ticker
+       AND j.trade_date = DATEADD(day, 1, p.trade_date)
+    {% endif %}
 )
 
 SELECT * FROM final

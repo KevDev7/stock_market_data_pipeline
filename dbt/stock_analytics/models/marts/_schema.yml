@@ -5,26 +5,215 @@ version: 2
 
 models:
   - name: fct_trading_momentum
-    description: "Daily trading and technical indicators for Russell 3000 constituents."
+    description: |
+      Daily trading signals and technical indicators for Russell 3000 constituents.
+
+      Contains price movements, moving averages, volume metrics, and trading signals
+      updated daily via incremental load. Each row represents one ticker-date combination
+      with pre-calculated technical indicators for efficient querying.
+
+      Update Frequency: Daily at market close + 1 day
+      Grain: One row per ticker per trade_date
+      History: 2+ years rolling window
+
     columns:
       - name: ticker
-        description: Stock ticker
+        description: Stock ticker symbol
         tests:
           - not_null
+
       - name: trade_date
         description: Trading date
         tests:
           - not_null
+
+      - name: volume
+        description: Daily trading volume
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+
+      - name: open
+        description: Opening price
+
       - name: close
         description: Closing price
+
+      - name: high
+        description: Highest price of the day
+
+      - name: low
+        description: Lowest price of the day
+
+      - name: yesterday_close
+        description: Previous trading day's close
+
+      - name: sector
+        description: GICS sector classification
+
+      - name: company
+        description: Company name
+
       - name: sma_20
         description: 20-day simple moving average
+
       - name: sma_50
         description: 50-day simple moving average
+
       - name: sma_200
         description: 200-day simple moving average
+
+      - name: high_52week
+        description: Rolling 52-week (252 trading day) high
+
+      - name: bullish_crossover
+        description: Price crossed above SMA-20 today (1=yes, 0=no)
+
+      - name: golden_cross
+        description: SMA-50 crossed above SMA-200 today
+
+      - name: death_cross
+        description: SMA-50 crossed below SMA-200 today
+
+      - name: rel_vol
+        description: Relative volume vs 20-day average
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: 0
+              row_condition: "rel_vol IS NOT NULL"
+              strictly: true
+
+      - name: avg_gain_14
+        description: Average gain over 14-day window
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: -1e-8
+              row_condition: "avg_gain_14 IS NOT NULL"
+
+      - name: avg_loss_14
+        description: Average loss over 14-day window
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: -1e-8
+              row_condition: "avg_loss_14 IS NOT NULL"
+
       - name: rsi
-        description: 14-day Relative Strength Index
+        description: Relative Strength Index (14-day)
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              inclusive: true
+              where: "rsi IS NOT NULL AND rsi = rsi"
+
     tests:
       - unique:
           column_name: "CONCAT(ticker, '-', CAST(trade_date AS STRING))"
+          config:
+            where: "trade_date >= DATEADD(day, -7, CURRENT_DATE())"
+
+      - dbt_expectations.expect_table_row_count_to_equal_other_table:
+          compare_model: ref('int_russell3000__daily')
+
+  - name: agg_daily_market_breadth
+    description: |
+      Market-wide health and momentum indicators aggregated daily.
+
+      Grain: One row per trade_date
+
+    columns:
+      - name: trade_date
+        tests:
+          - not_null
+          - unique
+
+      - name: stocks_traded
+        tests:
+          - not_null
+
+      - name: advances
+      - name: declines
+      - name: unchanged_stocks
+
+      - name: pct_market_over_sma20
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: 0
+              row_condition: "pct_market_over_sma20 IS NOT NULL"
+
+      - name: market_rsi
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              inclusive: false
+
+      - name: ad_line
+      - name: ad_percentage
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: -1
+              max_value: 1
+              inclusive: false
+
+      - name: up_volume
+      - name: down_volume
+
+      - name: up_down_volume_ratio
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: 0
+              row_condition: "up_down_volume_ratio IS NOT NULL"
+
+      - name: high_low_index
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: false
+
+  - name: dim_securities_current
+    description: |
+      Latest snapshot of Russell 3000 constituents.
+      One row per ticker.
+
+    columns:
+      - name: ticker
+        tests:
+          - not_null
+          - unique
+
+      - name: company
+      - name: sector
+      - name: latest_volume
+      - name: latest_close
+
+      - name: return_1d
+      - name: return_1m
+      - name: return_3m
+      - name: return_ytd
+
+      - name: pct_distance_from_52week_high
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: 0
+              row_condition: "pct_distance_from_52week_high IS NOT NULL"
+
+      - name: volatility_20d
+      - name: performance_percentile
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+
+      - name: outperformance_vs_sector
+      - name: has_golden_cross_active
+      - name: days_over_sma50
+
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 2000
+          max_value: 3000
+

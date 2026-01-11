@@ -112,7 +112,6 @@ x-airflow-common:
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/config:/opt/airflow/config
     - ./airflow/plugins:/opt/airflow/plugins
-    # - ./airflow/spark_jobs:/opt/airflow/spark_jobs
     - ./keys:/opt/airflow/keys
     - ./src:/opt/airflow/src
     - ./dbt:/opt/airflow/dbt

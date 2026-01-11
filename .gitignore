@@ -43,3 +43,20 @@ logs/
 .idea/
 Thumbs.db
 
+# extra
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+build/
+dist/
+tmp/
+.ipynb_checkpoints/
+.python-version
+airflow/airflow.db
+airflow/webserver_config.py
+airflow/config/airflow.cfg
+data-viz/.streamlit/secrets.toml
+*.pem

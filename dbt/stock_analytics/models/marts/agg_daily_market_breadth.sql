@@ -60,42 +60,85 @@ high_low_aggs AS (
 sma_aggs AS (
     SELECT
         trade_date,
-        AVG(IFF(close > sma_20, 1, 0)) AS pct_market_over_sma20,
-        AVG(IFF(close > sma_50, 1, 0)) AS pct_market_over_sma50,
-        AVG(IFF(close > sma_200, 1, 0)) AS pct_market_over_sma200,
+        SUM(IFF(close > sma_20, 1, 0)) / COUNT(close) AS pct_market_over_sma20,
+        SUM(IFF(close > sma_50, 1, 0)) / COUNT(close) AS pct_market_over_sma50,
+        SUM(IFF(close > sma_200, 1, 0)) / COUNT(close) AS pct_market_over_sma200,
         AVG(rsi) AS market_rsi
     FROM {{ ref('fct_trading_momentum') }}
     GROUP BY trade_date
+),
+
+final AS (
+    SELECT 
+        b.trade_date,
+        b.stocks_traded,
+        b.unchanged_stocks,
+        b.advances,
+        b.declines,
+        b.up_volume,
+        b.down_volume,
+
+        s.pct_market_over_sma20,
+        s.pct_market_over_sma50,
+        s.pct_market_over_sma200,
+        s.market_rsi,
+
+        SUM(b.advances - b.declines) OVER (
+            ORDER BY b.trade_date
+        ) AS ad_line,
+
+        IFF(
+            (b.advances + b.declines + b.unchanged_stocks) > 0,
+            (b.advances - b.declines)
+            / (b.advances + b.declines + b.unchanged_stocks),
+            NULL
+        ) AS ad_percentage,
+
+        IFF(
+            b.declines IS NOT NULL AND b.declines != 0,
+            b.advances / b.declines,
+            NULL
+        ) AS ad_ratio,
+
+        IFF(
+            b.down_volume IS NOT NULL AND b.down_volume != 0,
+            b.up_volume / b.down_volume,
+            NULL
+        ) AS up_down_volume_ratio,
+
+        IFF(
+            s.market_rsi > 70, 'overbought',
+            IFF(s.market_rsi < 30, 'oversold', 'normal')
+        ) AS market_momentum,
+
+        h.new_highs,
+        h.new_lows,
+
+        IFF(
+            b.stocks_traded > 0,
+            h.new_highs / b.stocks_traded,
+            NULL
+        ) AS record_high_pct,
+
+        AVG(
+            IFF(
+                (h.new_highs + h.new_lows) > 0,
+                h.new_highs / (h.new_highs + h.new_lows),
+                NULL
+            )
+        ) OVER (
+            ORDER BY h.trade_date
+            ROWS BETWEEN 9 PRECEDING AND CURRENT ROW
+        ) AS high_low_index
+
+    FROM base_aggregates b
+    LEFT JOIN sma_aggs s
+        ON s.trade_date = b.trade_date
+    LEFT JOIN high_low_aggs h
+        ON h.trade_date = b.trade_date
 )
 
-SELECT 
-    b.trade_date,
-    b.stocks_traded,
-    b.unchanged_stocks,
-    b.advances,
-    b.declines,
-    b.up_volume,
-    b.down_volume,
-    s.pct_market_over_sma20,
-    s.pct_market_over_sma50,
-    s.pct_market_over_sma200,
-    s.market_rsi,
-    SUM(b.advances - b.declines) OVER (ORDER BY b.trade_date) AS ad_line,
-    IFF(
-        (b.advances + b.declines + b.unchanged_stocks) > 0,
-        (b.advances - b.declines) / (b.advances + b.declines + b.unchanged_stocks),
-        NULL
-    ) AS ad_percentage,
-    IFF(b.declines > 0, b.advances / b.declines, NULL) AS ad_ratio,
-    IFF(b.down_volume > 0, b.up_volume / b.down_volume, NULL) AS up_down_volume_ratio,
-    IFF(s.market_rsi > 70, 'overbought',
-        IFF(s.market_rsi < 30, 'oversold', 'normal')
-    ) AS market_momentum,
-    IFF(b.stocks_traded > 0, h.new_highs / b.stocks_traded, NULL) AS record_high_pct,
-    AVG(
-        IFF((h.new_highs + h.new_lows) > 0, h.new_highs / (h.new_highs + h.new_lows), NULL)
-    ) OVER (ORDER BY h.trade_date ROWS BETWEEN 9 PRECEDING AND CURRENT ROW) AS high_low_index
-FROM base_aggregates b
-LEFT JOIN sma_aggs s ON s.trade_date = b.trade_date
-LEFT JOIN high_low_aggs h ON h.trade_date = b.trade_date
-ORDER BY b.trade_date
+SELECT *
+FROM final
+ORDER BY trade_date
+

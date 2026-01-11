@@ -1,3 +1,4 @@
+-- Checks for market breadth rows where component counts don't reconcile.
 SELECT 
     *
 FROM {{ ref('agg_daily_market_breadth') }}
