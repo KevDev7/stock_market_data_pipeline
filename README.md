@@ -4,7 +4,9 @@ A modern data pipeline that ingests, transforms, and analyzes daily U.S. equity 
 
 The goal of this project is to build an end‑to‑end, production‑style analytics stack for equity market research: from raw OHLCV data to technical indicators, market breadth metrics, and interactive dashboards.
 
-![Market breadth dashboard](assets/market_breadth.png)
+<p align="center">
+  <img src="assets/market_breadth.png" width="100%" alt="Market breadth dashboard">
+</p>
 
 ## Architecture Overview
 
@@ -149,7 +151,9 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
 
 #### Analytics Marts
 
-![Marts schema](assets/marts_schema.png)
+<p align="center">
+  <img src="assets/marts_schema.png" width="100%" alt="Marts schema">
+</p>
 
 - `fct_trading_momentum` (incremental fact table)  
   Daily trading signals and technical indicators:
@@ -185,7 +189,9 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
 - Market breadth dashboard highlighted at the top of this README.
 - Streamlit entrypoint preview:
 
-![Streamlit home dashboard](assets/streamlit_app.png)
+<p align="center">
+  <img src="assets/streamlit_app.png" width="100%" alt="Streamlit home dashboard">
+</p>
 - Example pages:
   - `streamlit_app.py`: Home page with the latest market breadth snapshot.
   - `1_Market_Breadth.py`: Market breadth trends and key signals.
@@ -195,9 +201,15 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
 <details>
   <summary>More dashboard views</summary>
 
-  ![Universe screener](assets/universe_screener.png)
-  ![Ticker momentum (view 1)](assets/ticker_momentum_1.png)
-  ![Ticker momentum (view 2)](assets/ticker_momentum_2.png)
+  <p align="center">
+    <img src="assets/universe_screener.png" width="100%" alt="Universe screener">
+  </p>
+  <p align="center">
+    <img src="assets/ticker_momentum_1.png" width="100%" alt="Ticker momentum (view 1)">
+  </p>
+  <p align="center">
+    <img src="assets/ticker_momentum_2.png" width="100%" alt="Ticker momentum (view 2)">
+  </p>
 </details>
 
 ## Getting Started
