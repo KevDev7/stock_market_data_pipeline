@@ -1,4 +1,4 @@
-# Stock Market Analytics Pipeline (Snowflake)
+# Stock Market Data Analytics Pipeline
 
 A modern data pipeline that ingests, transforms, and analyzes daily U.S. equity market data for the Russell 3000 universe using Polygon.io, Apache Airflow, Snowflake, dbt, and Streamlit.
 
