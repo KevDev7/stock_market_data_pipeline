@@ -4,6 +4,8 @@ A modern data pipeline that ingests, transforms, and analyzes daily U.S. equity 
 
 The goal of this project is to build an end‑to‑end, production‑style analytics stack for equity market research: from raw OHLCV data to technical indicators, market breadth metrics, and interactive dashboards.
 
+![Market breadth dashboard](assets/market_breadth.png)
+
 ## Architecture Overview
 
 ```mermaid
@@ -147,6 +149,8 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
 
 #### Analytics Marts
 
+![Marts schema](assets/marts_schema.png)
+
 - `fct_trading_momentum` (incremental fact table)  
   Daily trading signals and technical indicators:
   - Simple Moving Averages: 20, 50, 200‑day (`sma_20`, `sma_50`, `sma_200`)
@@ -178,11 +182,23 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
   - Load a PEM‑encoded RSA private key from `st.secrets`.
   - Establish a Snowflake connection.
   - Run SQL and return `pandas` DataFrames.
+- Market breadth dashboard highlighted at the top of this README.
+- Streamlit entrypoint preview:
+
+![Streamlit home dashboard](assets/streamlit_app.png)
 - Example pages:
   - `streamlit_app.py`: Home page with the latest market breadth snapshot.
   - `1_Market_Breadth.py`: Market breadth trends and key signals.
   - `2_Universe_Screener.py`: Filterable Russell 3000 snapshot from `dim_securities_current`.
   - `3_Ticker_Momentum.py`: Ticker‑level momentum and signal history from `fct_trading_momentum`.
+
+<details>
+  <summary>More dashboard views</summary>
+
+  ![Universe screener](assets/universe_screener.png)
+  ![Ticker momentum (view 1)](assets/ticker_momentum_1.png)
+  ![Ticker momentum (view 2)](assets/ticker_momentum_2.png)
+</details>
 
 ## Getting Started
 
