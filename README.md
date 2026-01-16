@@ -30,10 +30,10 @@ graph LR
 
 - Automated daily ingestion of Polygon grouped daily aggregates into Snowflake.
 - Trading‑calendar aware scheduling using NYSE market hours (no weekends/holidays).
-- Incremental dbt models for technical indicators and market breadth.
+- Incremental dbt models for technical indicators; market breadth is materialized as a table.
 - Ingestion checkpoints in Snowflake (`ADMIN.INGESTION_CHECKPOINTS`) for restartability.
 - Analytics‑ready marts for security‑level and market‑level analysis.
-- Streamlit dashboards for market overview, sector performance, and stock screening.
+- Streamlit dashboards for market breadth, universe screening, and ticker momentum.
 
 ## Project Structure
 
@@ -65,9 +65,9 @@ stock_market_data_pipeline/
 ├── data-viz/
 │   ├── streamlit_app.py                  # Streamlit entrypoint
 │   ├── pages/                            # Individual dashboard pages
-│   │   ├── 1_Market_Overview.py
-│   │   ├── 2_Sector_Performance.py
-│   │   └── 3_Stock_Screener.py
+│   │   ├── 1_Market_Breadth.py
+│   │   ├── 2_Universe_Screener.py
+│   │   └── 3_Ticker_Momentum.py
 │   └── utilities/
 │       └── snowflake_helper.py           # Helper for querying Snowflake from Streamlit
 ├── docker-compose.yaml                   # Airflow + Postgres + custom image
@@ -97,11 +97,11 @@ stock_market_data_pipeline/
 
 - DAG definition: `airflow/dags/daily_stock_pipeline_dag.py`
 - `dag_id`: `market_data_pipeline`
-- Schedule: `0 12 * * 1-5` (Mon–Fri at noon ET; previous trading day data).
+- Schedule: `0 12 * * 1-5` (Mon–Fri at noon ET; last completed trading day data).
 - Steps:
   1. **Extract & Load**  
      `extract()` task calls `src.extract_load_stocks.extract_load_data(days_back_override=1)` to:
-     - Determine valid NYSE trading days using `pandas-market-calendars`.
+        - Determine valid NYSE trading days using `pandas-market-calendars`, with daily runs targeting the last completed trading day.
      - Skip dates already marked as `completed` in `ADMIN.INGESTION_CHECKPOINTS`.
      - Fetch Polygon data and load into `RAW.DAILY_STOCKS`.
   2. **Transform**  
@@ -144,7 +144,6 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
   - Joins `stg_daily_stocks` with Russell 3000 constituents.
   - Filters universe down to index members.
   - Carries forward sector/company metadata and index weights.
-  - Applies data quality filters (e.g., `is_valid_record`).
 
 #### Analytics Marts
 
@@ -155,7 +154,6 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
   - Golden/Death cross signals
   - 52‑week highs/lows
   - Relative volume vs 20‑day average
-  - Ensures latest record per ticker/trade_date based on `ingested_at`
 
 - `agg_daily_market_breadth` (aggregated table)  
   Market‑wide health indicators across the Russell 3000:
@@ -181,9 +179,10 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
   - Establish a Snowflake connection.
   - Run SQL and return `pandas` DataFrames.
 - Example pages:
-  - `1_Market_Overview.py`: Top‑down market metrics and breadth.
-  - `2_Sector_Performance.py`: Sector rotations, sector‑level returns and breadth.
-  - `3_Stock_Screener.py`: Filterable view using `dim_securities_current` (momentum, volatility, sector).
+  - `streamlit_app.py`: Home page with the latest market breadth snapshot.
+  - `1_Market_Breadth.py`: Market breadth trends and key signals.
+  - `2_Universe_Screener.py`: Filterable Russell 3000 snapshot from `dim_securities_current`.
+  - `3_Ticker_Momentum.py`: Ticker‑level momentum and signal history from `fct_trading_momentum`.
 
 ## Getting Started
 

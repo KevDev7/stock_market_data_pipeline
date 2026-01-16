@@ -5,27 +5,116 @@ version: 2
 
 models:
   - name: int_russell3000__daily
-    description: "Daily market data enriched with Russell 3000 membership and sector info"
+    description: |
+      Filtered and enriched daily stock data for Russell 3000 constituents.
+
+      This incremental table joins daily market data with Russell 3000
+      constituent information to provide point-in-time accurate index
+      membership and sector context.
+
+      Derived analytics fields such as yesterday’s close and consecutive
+      trading days are computed with incremental-safe logic.
+
+      Update Frequency: Daily (after market close)
+      Grain: One row per ticker per trade_date
+      History: 2+ years
+      Materialization: Incremental
+      Unique Key: (ticker, trade_date)
+
     columns:
       - name: ticker
         description: Stock ticker symbol
         tests:
           - not_null
+
       - name: trade_date
-        description: Trading date
+        description: Trading date (market days only)
         tests:
           - not_null
+
+      - name: volume
+        description: Daily trading volume (shares traded)
+
+      - name: volume_weighted_avg
+        description: |
+          Volume-weighted average price (VWAP) for the trading day.
+          Represents average execution price weighted by volume.
+
+      - name: open
+        description: Opening price for the trading session
+
+      - name: close
+        description: Closing price for the trading session
+
+      - name: high
+        description: Highest price during the trading session
+
+      - name: low
+        description: Lowest price during the trading session
+
+      - name: num_transactions
+        description: Total number of trades executed during the day
+
+      - name: ingested_at
+        description: |
+          Timestamp when the record was ingested into the raw data layer.
+          Used for auditability and data freshness checks.
+
+      - name: has_volume
+        description: |
+          Binary indicator of trading activity.
+          1 = Trading volume greater than zero
+          0 = No reported volume
+
+      - name: is_valid_record
+        description: |
+          Data quality validation flag.
+          1 = Prices and volume pass logical consistency checks
+          0 = Failed validation rules
+
+      - name: sector
+        description: |
+          GICS sector classification sourced from Russell 3000
+          constituent data and updated during index rebalancing.
+
       - name: company
         description: Company name from Russell 3000 constituent data
-      - name: sector
-        description: GICS sector classification
+
       - name: index_weight
-        description: Index weight (% of Russell 3000)
+        description: |
+          Weight of the stock within the Russell 3000 index (percentage).
+          Updated during periodic index rebalancing.
+
       - name: consecutive_trading_days
-        description: Running count of days the ticker appears
+        description: |
+          Running count of consecutive trading days for the ticker
+          within the dataset. Resets if the ticker exits and re-enters
+          the index.
+
       - name: yesterday_close
-        description: Previous trading day’s close
+        description: |
+          Previous trading day’s closing price.
+          Handles weekends, holidays, and incremental load boundaries.
+          NULL for the first observed trading day.
+
       - name: is_new_to_index
-        description: Binary flag indicating if stock just entered the index
+        description: |
+          Binary flag indicating index entry.
+          1 = First day the ticker appears in Russell 3000
+          0 = Existing constituent
+
+    tests:
+      # Enforce uniqueness at the fact grain for recent data
+      - unique:
+          column_name: "ticker || '-' || TO_VARCHAR(trade_date)"
+          config:
+            where: "trade_date >= DATEADD(day, -30, CURRENT_DATE())"
+
+      # Sanity check on index weights
+      - dbt_expectations.expect_column_values_to_be_between:
+          column_name: index_weight
+          min_value: 0
+          max_value: 10
+
 
 

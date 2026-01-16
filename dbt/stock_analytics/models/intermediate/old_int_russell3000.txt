@@ -118,3 +118,81 @@ final AS (
 
 SELECT * FROM final
 
+////////////////////////////------------------------------------------------------------------------------------------
+
+-- BASELINE VERSION (FULL RECOMPUTE)
+-- Used only to measure non-incremental performance
+
+{{ config(
+    materialized = 'table',
+    on_schema_change = 'fail'
+) }}
+
+WITH russell_3000 AS (
+    -- Time-aware dimension: defines Russell 3000 membership by date
+    SELECT *
+    FROM {{ ref('stg_russell3000__constituents') }}
+),
+
+full_market AS (
+    -- Full historical daily market data (no pruning)
+    SELECT DISTINCT *
+    FROM {{ ref('stg_daily_stocks') }}
+),
+
+joined AS (
+    -- Point-in-time correct enrichment with index metadata
+    SELECT 
+        f.ticker,
+        f.trade_date,
+        f.volume,
+        f.volume_weighted_avg,
+        f.open,
+        f.close,
+        f.high,
+        f.low,
+        f.num_transactions,
+        f.ingested_at,
+        f.has_volume,
+        f.is_valid_record,
+        r.sector,
+        r.company,
+        r.market_weight AS index_weight
+    FROM full_market AS f
+    INNER JOIN russell_3000 AS r
+        ON f.ticker = r.ticker
+        AND f.trade_date BETWEEN r.valid_from AND r.valid_to
+),
+
+final AS (
+    SELECT
+        j.*,
+
+        -- Count of appearances per ticker since first inclusion
+        ROW_NUMBER() OVER (
+            PARTITION BY j.ticker
+            ORDER BY j.trade_date
+        ) AS consecutive_trading_days,
+
+        -- Previous trading day's close (all history available)
+        LAG(j.close) OVER (
+            PARTITION BY j.ticker
+            ORDER BY j.trade_date
+        ) AS yesterday_close,
+
+        -- First appearance of ticker in the dataset
+        CASE 
+            WHEN LAG(j.ticker) OVER (
+                PARTITION BY j.ticker
+                ORDER BY j.trade_date
+            ) IS NULL 
+            THEN 1 
+            ELSE 0 
+        END AS is_new_to_index
+
+    FROM joined AS j
+)
+
+SELECT * FROM final
+
+

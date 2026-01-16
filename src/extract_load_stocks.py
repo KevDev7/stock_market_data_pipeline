@@ -34,9 +34,18 @@ def extract_load_data(years_back=2, days_back_override=None):
     run_id = pendulum.now().strftime("%Y%m%d_%H%M%S")
     print(f"\nStarting historical stock data load | run_id = {run_id}")
 
-    end_date = pendulum.now().date() - duration(days=1)
+    today = pendulum.now("America/New_York").date()
+    end_date = today - duration(days=1)
 
-    if days_back_override:
+    if days_back_override == 1:
+        calendar = mcal.get_calendar("NYSE")
+        schedule = calendar.schedule(
+            start_date=today.subtract(days=10),
+            end_date=today
+        )
+        last_trading_day = schedule.index[schedule.index < today][-1].date()
+        start_date = end_date = last_trading_day
+    elif days_back_override:
         start_date = end_date - duration(days=days_back_override)
     else:
         start_date = end_date - duration(years=years_back)

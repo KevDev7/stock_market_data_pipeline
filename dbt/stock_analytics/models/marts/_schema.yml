@@ -8,76 +8,95 @@ models:
     description: |
       Daily trading signals and technical indicators for Russell 3000 constituents.
 
-      Contains price movements, moving averages, volume metrics, and trading signals
-      updated daily via incremental load. Each row represents one ticker-date combination
-      with pre-calculated technical indicators for efficient querying.
+      This fact table contains daily price data, volume metrics, moving averages,
+      and technical signals computed incrementally. Each row represents one
+      ticker on one trading date with pre-calculated indicators for fast analytics
+      and dashboarding.
 
       Update Frequency: Daily at market close + 1 day
       Grain: One row per ticker per trade_date
       History: 2+ years rolling window
+      Materialization: Incremental
+      Unique Key: (ticker, trade_date)
 
     columns:
       - name: ticker
-        description: Stock ticker symbol
+        description: Stock ticker symbol (e.g., AAPL, MSFT)
         tests:
           - not_null
 
       - name: trade_date
-        description: Trading date
+        description: Trading date (market days only)
         tests:
           - not_null
 
       - name: volume
-        description: Daily trading volume
+        description: Daily trading volume (shares traded)
         tests:
           - dbt_utils.accepted_range:
               min_value: 0
               inclusive: false
 
       - name: open
-        description: Opening price
+        description: Opening price for the trading session
 
       - name: close
-        description: Closing price
+        description: Closing price for the trading session
 
       - name: high
-        description: Highest price of the day
+        description: Highest price during the trading session
 
       - name: low
-        description: Lowest price of the day
+        description: Lowest price during the trading session
 
       - name: yesterday_close
-        description: Previous trading day's close
+        description: Previous trading day’s closing price
 
       - name: sector
-        description: GICS sector classification
+        description: GICS sector classification inherited from Russell 3000 data
 
       - name: company
-        description: Company name
+        description: Company name associated with the ticker
 
       - name: sma_20
-        description: 20-day simple moving average
+        description: |
+          20-day Simple Moving Average.
+          NULL if fewer than 20 trading days are available.
 
       - name: sma_50
-        description: 50-day simple moving average
+        description: |
+          50-day Simple Moving Average.
+          NULL if fewer than 50 trading days are available.
 
       - name: sma_200
-        description: 200-day simple moving average
+        description: |
+          200-day Simple Moving Average.
+          NULL if fewer than 200 trading days are available.
 
       - name: high_52week
-        description: Rolling 52-week (252 trading day) high
+        description: |
+          Rolling 52-week (252 trading day) high price.
+          NULL if insufficient history exists.
 
       - name: bullish_crossover
-        description: Price crossed above SMA-20 today (1=yes, 0=no)
+        description: |
+          Price crossed above SMA-20 today.
+          1 = Bullish signal, 0 = No crossover.
 
       - name: golden_cross
-        description: SMA-50 crossed above SMA-200 today
+        description: |
+          SMA-50 crossed above SMA-200 today.
+          1 = Golden cross (bullish), 0 = No signal.
 
       - name: death_cross
-        description: SMA-50 crossed below SMA-200 today
+        description: |
+          SMA-50 crossed below SMA-200 today.
+          1 = Death cross (bearish), 0 = No signal.
 
       - name: rel_vol
-        description: Relative volume vs 20-day average
+        description: |
+          Relative volume versus 20-day average.
+          > 1.0 = Above average activity.
         tests:
           - dbt_expectations.expect_column_min_to_be_between:
               min_value: 0
@@ -85,64 +104,85 @@ models:
               strictly: true
 
       - name: avg_gain_14
-        description: Average gain over 14-day window
+        description: |
+          Average gain over a 14-day window (RSI component).
         tests:
           - dbt_expectations.expect_column_min_to_be_between:
-              min_value: -1e-8
+              min_value: 0
               row_condition: "avg_gain_14 IS NOT NULL"
 
       - name: avg_loss_14
-        description: Average loss over 14-day window
+        description: |
+          Average loss over a 14-day window (RSI component).
         tests:
           - dbt_expectations.expect_column_min_to_be_between:
               min_value: -1e-8
               row_condition: "avg_loss_14 IS NOT NULL"
 
       - name: rsi
-        description: Relative Strength Index (14-day)
+        description: |
+          Relative Strength Index (14-day).
+          Range: 0–100.
+          > 70 = Overbought, < 30 = Oversold.
         tests:
           - dbt_utils.accepted_range:
               min_value: 0
               max_value: 100
               inclusive: true
-              where: "rsi IS NOT NULL AND rsi = rsi"
+              where: "rsi IS NOT NULL"
 
     tests:
+      # Enforce uniqueness at the fact grain for recent data
       - unique:
-          column_name: "CONCAT(ticker, '-', CAST(trade_date AS STRING))"
+          column_name: "ticker || '-' || TO_VARCHAR(trade_date)"
           config:
             where: "trade_date >= DATEADD(day, -7, CURRENT_DATE())"
 
+      # Ensure no rows are lost between intermediate and mart
       - dbt_expectations.expect_table_row_count_to_equal_other_table:
           compare_model: ref('int_russell3000__daily')
 
+
   - name: agg_daily_market_breadth
     description: |
-      Market-wide health and momentum indicators aggregated daily.
+      Market-wide breadth and momentum indicators aggregated daily.
+
+      Provides a single-row-per-day view of overall market health,
+      including advances/declines, volume flows, and breadth metrics.
 
       Grain: One row per trade_date
+      History: 2+ years
 
     columns:
       - name: trade_date
+        description: Trading date
         tests:
           - not_null
           - unique
 
       - name: stocks_traded
+        description: Count of stocks with data on that day
         tests:
           - not_null
 
-      - name: advances
-      - name: declines
       - name: unchanged_stocks
+        description: Count of stocks with no price change
+
+      - name: advances
+        description: Stocks closing higher than previous day
+
+      - name: declines
+        description: Stocks closing lower than previous day
 
       - name: pct_market_over_sma20
+        description: Percentage of stocks above their 20-day SMA
         tests:
           - dbt_expectations.expect_column_min_to_be_between:
               min_value: 0
               row_condition: "pct_market_over_sma20 IS NOT NULL"
 
       - name: market_rsi
+        description: Average RSI across all stocks
         tests:
           - dbt_utils.accepted_range:
               min_value: 0
@@ -150,7 +190,10 @@ models:
               inclusive: false
 
       - name: ad_line
+        description: Cumulative advance–decline line
+
       - name: ad_percentage
+        description: (Advances − Declines) / Total stocks
         tests:
           - dbt_utils.accepted_range:
               min_value: -1
@@ -158,50 +201,80 @@ models:
               inclusive: false
 
       - name: up_volume
+        description: Total volume for advancing stocks
+
       - name: down_volume
+        description: Total volume for declining stocks
 
       - name: up_down_volume_ratio
+        description: Up volume divided by down volume
         tests:
           - dbt_expectations.expect_column_min_to_be_between:
               min_value: 0
               row_condition: "up_down_volume_ratio IS NOT NULL"
 
       - name: high_low_index
+        description: Ratio of new highs to total new highs + lows
         tests:
           - dbt_utils.accepted_range:
               min_value: 0
               max_value: 1
               inclusive: false
 
+
   - name: dim_securities_current
     description: |
       Latest snapshot of Russell 3000 constituents.
-      One row per ticker.
+
+      Provides one row per ticker representing the most recent state,
+      including prices, returns, volatility, and technical signals.
+
+      Grain: One row per ticker
+      Update Frequency: Daily
 
     columns:
       - name: ticker
+        description: Stock ticker symbol
         tests:
           - not_null
           - unique
 
       - name: company
+        description: Company name
+
       - name: sector
+        description: GICS sector classification
+
       - name: latest_volume
+        description: Most recent trading volume
+
       - name: latest_close
+        description: Most recent closing price
 
       - name: return_1d
+        description: One-day return percentage
+
       - name: return_1m
+        description: One-month return percentage
+
       - name: return_3m
+        description: Three-month return percentage
+
       - name: return_ytd
+        description: Year-to-date return percentage
 
       - name: pct_distance_from_52week_high
+        description: Percentage distance from 52-week high
         tests:
           - dbt_expectations.expect_column_min_to_be_between:
               min_value: 0
               row_condition: "pct_distance_from_52week_high IS NOT NULL"
 
       - name: volatility_20d
+        description: Annualized 20-day volatility
+
       - name: performance_percentile
+        description: Relative performance rank (0–1)
         tests:
           - dbt_utils.accepted_range:
               min_value: 0
@@ -209,11 +282,17 @@ models:
               inclusive: true
 
       - name: outperformance_vs_sector
+        description: 1-month return minus sector average
+
       - name: has_golden_cross_active
+        description: Current golden cross state
+
       - name: days_over_sma50
+        description: Number of consecutive days closing above SMA-50
 
     tests:
       - dbt_expectations.expect_table_row_count_to_be_between:
           min_value: 2000
           max_value: 3000
+
 
