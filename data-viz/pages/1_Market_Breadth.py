@@ -10,7 +10,7 @@ from utilities.dashboard_helpers import (
     render_data_freshness,
     render_page_intro,
 )
-from utilities.snowflake_helper import query_snowflake
+from utilities.snowflake_helper import qualified_table, query_snowflake
 
 st.set_page_config(page_title="Market Breadth", layout="wide")
 
@@ -23,10 +23,10 @@ render_page_intro(
 
 query = """
     SELECT *
-    FROM MARKET.RAW_MARTS.AGG_DAILY_MARKET_BREADTH
+    FROM {breadth_table}
     ORDER BY TRADE_DATE DESC
     LIMIT 30
-"""
+""".format(breadth_table=qualified_table("FCT_MARKET_DAILY_BREADTH"))
 
 df = query_snowflake(query)
 

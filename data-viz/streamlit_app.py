@@ -9,7 +9,7 @@ from utilities.dashboard_helpers import (
     render_data_freshness,
     render_page_intro,
 )
-from utilities.snowflake_helper import query_snowflake
+from utilities.snowflake_helper import qualified_table, query_snowflake
 
 st.set_page_config(page_title="Home", layout="wide")
 
@@ -23,14 +23,14 @@ st.sidebar.success("Use the sidebar to navigate the marts")
 
 breadth_query = """
     SELECT *
-    FROM MARKET.RAW_MARTS.AGG_DAILY_MARKET_BREADTH
+    FROM {breadth_table}
     ORDER BY TRADE_DATE DESC
     LIMIT 1
-"""
+""".format(breadth_table=qualified_table("FCT_MARKET_DAILY_BREADTH"))
 count_query = """
     SELECT COUNT(*) AS TICKER_COUNT
-    FROM MARKET.RAW_MARTS.DIM_SECURITIES_CURRENT
-"""
+    FROM {snapshot_table}
+""".format(snapshot_table=qualified_table("FCT_SECURITY_CURRENT_SNAPSHOT"))
 
 breadth_df = query_snowflake(breadth_query)
 count_df = query_snowflake(count_query)

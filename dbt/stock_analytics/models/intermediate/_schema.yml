@@ -80,6 +80,21 @@ models:
       - name: company
         description: Company name from Russell 3000 constituent data
 
+      - name: asset_class
+        description: Asset class from Russell 3000 constituent data
+
+      - name: location
+        description: Issuer location from Russell 3000 constituent data
+
+      - name: exchange
+        description: Primary exchange from Russell 3000 constituent data
+
+      - name: currency
+        description: Security currency from Russell 3000 constituent data
+
+      - name: market_currency
+        description: Market currency from Russell 3000 constituent data
+
       - name: index_weight
         description: |
           Weight of the stock within the Russell 3000 index (percentage).
@@ -115,6 +130,5 @@ models:
           column_name: index_weight
           min_value: 0
           max_value: 10
-
 
 

@@ -10,7 +10,7 @@ from utilities.dashboard_helpers import (
     render_data_freshness,
     render_page_intro,
 )
-from utilities.snowflake_helper import query_snowflake
+from utilities.snowflake_helper import qualified_table, query_snowflake
 
 st.set_page_config(page_title="Ticker Momentum", layout="wide")
 
@@ -23,13 +23,13 @@ render_page_intro(
 
 ticker_query = """
     SELECT DISTINCT TICKER
-    FROM MARKET.RAW_MARTS.DIM_SECURITIES_CURRENT
+    FROM {securities_table}
     ORDER BY TICKER
-"""
+""".format(securities_table=qualified_table("DIM_SECURITY"))
 date_query = """
     SELECT MIN(TRADE_DATE) AS MIN_DATE, MAX(TRADE_DATE) AS MAX_DATE
-    FROM MARKET.RAW_MARTS.FCT_TRADING_MOMENTUM
-"""
+    FROM {momentum_table}
+""".format(momentum_table=qualified_table("FCT_SECURITY_DAILY_MOMENTUM"))
 
 tickers_df = query_snowflake(ticker_query)
 dates_df = query_snowflake(date_query)
@@ -71,28 +71,30 @@ row_limit = st.sidebar.number_input(
 
 query = f"""
     SELECT
-        TICKER,
-        TRADE_DATE,
-        OPEN,
-        HIGH,
-        LOW,
-        CLOSE,
-        YESTERDAY_CLOSE,
-        VOLUME,
-        SMA_20,
-        SMA_50,
-        SMA_200,
-        RSI,
-        REL_VOL,
-        HIGH_52WEEK,
-        LOW_52WEEK,
-        BULLISH_CROSSOVER,
-        GOLDEN_CROSS,
-        DEATH_CROSS
-    FROM MARKET.RAW_MARTS.FCT_TRADING_MOMENTUM
-    WHERE TICKER = '{selected_ticker}'
-      AND TRADE_DATE BETWEEN '{start_date}' AND '{end_date}'
-    ORDER BY TRADE_DATE DESC
+        s.TICKER,
+        f.TRADE_DATE,
+        f.OPEN,
+        f.HIGH,
+        f.LOW,
+        f.CLOSE,
+        f.YESTERDAY_CLOSE,
+        f.VOLUME,
+        f.SMA_20,
+        f.SMA_50,
+        f.SMA_200,
+        f.RSI,
+        f.REL_VOL,
+        f.HIGH_52WEEK,
+        f.LOW_52WEEK,
+        f.BULLISH_CROSSOVER,
+        f.GOLDEN_CROSS,
+        f.DEATH_CROSS
+    FROM {qualified_table("FCT_SECURITY_DAILY_MOMENTUM")} AS f
+    INNER JOIN {qualified_table("DIM_SECURITY")} AS s
+        ON s.SECURITY_KEY = f.SECURITY_KEY
+    WHERE s.TICKER = '{selected_ticker}'
+      AND f.TRADE_DATE BETWEEN '{start_date}' AND '{end_date}'
+    ORDER BY f.TRADE_DATE DESC
     LIMIT {row_limit}
 """
 

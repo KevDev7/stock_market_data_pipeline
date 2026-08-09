@@ -13,11 +13,12 @@ The goal of this project is to build an end‑to‑end, production‑style analy
 ```mermaid
 graph LR
     A[Polygon API] -->|Daily Extract| B[Apache Airflow]
-    B -->|Load| C[Snowflake RAW.DAILY_STOCKS]
-    C -->|dbt Transform| D[Snowflake raw_staging]
-    D --> E[Snowflake raw_intermediate]
-    E --> F[Snowflake raw_marts]
-    F --> G[Streamlit Dashboards]
+    B -->|Load| C[Snowflake RAW.DAILY_STOCKS_RAW]
+    C -->|dbt Transform| D[Snowflake STAGING]
+    D --> E[Snowflake INTERMEDIATE]
+    E --> F[Snowflake MART_STAGING]
+    F --> G[Snowflake MARTS]
+    G --> H[Streamlit Dashboards]
 ```
 
 ## Technology Stack
@@ -34,9 +35,9 @@ graph LR
 
 - Automated daily ingestion of Polygon grouped daily aggregates into Snowflake.
 - Trading‑calendar aware scheduling using NYSE market hours (no weekends/holidays).
-- Incremental dbt models for technical indicators; market breadth is materialized as a table.
+- Incremental dbt models for technical indicators, with market and sector breadth facts.
 - Ingestion checkpoints in Snowflake (`ADMIN.INGESTION_CHECKPOINTS`) for restartability.
-- Analytics‑ready marts for security‑level and market‑level analysis.
+- Dimensional marts for security‑level, sector‑level, and market‑level analysis.
 - Streamlit dashboards for market breadth, universe screening, and ticker momentum.
 
 ## Project Structure
@@ -56,6 +57,7 @@ stock_market_data_pipeline/
 │       ├── models/
 │       │   ├── staging/                  # Raw data cleaning / typing
 │       │   ├── intermediate/             # Russell 3000 enrichments
+│       │   ├── mart_staging/             # Gold staging / pre-mart measure prep
 │       │   └── marts/                    # Analytics‑ready fact/dimension tables
 │       ├── macros/                       # Reusable SQL macros (SMA, returns, etc.)
 │       ├── seeds/                        # Russell 3000 constituent snapshots
@@ -63,7 +65,7 @@ stock_market_data_pipeline/
 ├── src/
 │   ├── config.py                         # Config loader (Airflow Variables / .env)
 │   ├── extraction.py                     # Polygon API interface (grouped daily)
-│   ├── load.py                           # Normalize + load data into Snowflake
+│   ├── load.py                           # Raw-load Polygon rows into Snowflake
 │   ├── extract_load_stocks.py            # Main ETL orchestration logic
 │   └── snowflake_client.py               # Snowflake connection + tables + checkpoints
 ├── data-viz/
@@ -87,13 +89,13 @@ stock_market_data_pipeline/
   - Endpoint: `GET {API_BASE_URL}/v2/aggs/grouped/locale/us/market/stocks/{date}`
   - Parameters: `adjusted=true`, `apiKey=${POLYGON_API_KEY}`
   - Includes basic retry handling for rate limits and transient errors.
-- `src/load.py` normalizes the response into a consistent schema:
-  - Renames Polygon fields (`t`, `v`, `o`, `c`, `h`, `l`, `n`) to Snowflake columns.
-  - Adds a `DATE` column (trading date) and `INGESTED_AT` timestamp.
-  - Enforces type consistency for timestamps and numeric fields.
+- `src/load.py` lands the response as raw Polygon row payloads:
+  - Stores each source row in `RAW_PAYLOAD`.
+  - Adds operational metadata: `API_DATE`, `RUN_ID`, `SOURCE`, and `INGESTED_AT`.
+  - Leaves business typing and normalization to dbt staging models.
 - `src/snowflake_client.py`:
   - Establishes a Snowflake connection using RSA private‑key auth.
-  - Ensures the `RAW.DAILY_STOCKS` table and `ADMIN.INGESTION_CHECKPOINTS` table exist.
+  - Ensures the `RAW.DAILY_STOCKS_RAW` table and `ADMIN.INGESTION_CHECKPOINTS` table exist.
   - Writes pandas DataFrames into Snowflake using `write_pandas`.
   - Records ingestion checkpoints for each trading date (status, row count, timestamps).
 
@@ -107,63 +109,97 @@ stock_market_data_pipeline/
      `extract()` task calls `src.extract_load_stocks.extract_load_data(days_back_override=1)` to:
         - Determine valid NYSE trading days using `pandas-market-calendars`, with daily runs targeting the last completed trading day.
      - Skip dates already marked as `completed` in `ADMIN.INGESTION_CHECKPOINTS`.
-     - Fetch Polygon data and load into `RAW.DAILY_STOCKS`.
+     - Fetch Polygon data and load into `RAW.DAILY_STOCKS_RAW`.
   2. **Transform**  
      Shell tasks run dbt models layer‑by‑layer:
      - `dbt run --select staging`
      - `dbt run --select intermediate`
+     - `dbt run --select mart_staging`
      - `dbt run --select marts`
   3. **Test**  
      - `dbt test` for model‑level and custom tests.
 
-The DAG enforces strict ordering: Extract → Staging → Intermediate → Marts → Tests.
+The DAG enforces strict ordering: Extract → Staging → Intermediate → Mart Staging → Marts → Tests.
 
 ### 3. Transformation: dbt on Snowflake
 
 The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
 
-- Seeds (`raw_seeds` schema) hold Russell 3000 constituent snapshots at multiple dates.
-- Staging models (`raw_staging` schema) clean and standardize raw Snowflake tables.
-- Intermediate models (`raw_intermediate` schema) apply business logic and enrichments.
-- Marts (`raw_marts` schema) expose analytics‑ready datasets.
+- Seeds (`SEEDS` schema) hold Russell 3000 constituent snapshots at multiple dates.
+- Staging models (`STAGING` schema) clean and standardize raw Snowflake tables.
+- Intermediate models (`INTERMEDIATE` schema) apply business logic and enrichments.
+- Mart staging models (`MART_STAGING` schema) prepare final business measures.
+- Marts (`MARTS` schema) expose dimensional facts and conformed dimensions.
 
 #### Staging Layer
 
-- `stg_daily_stocks`  
-  - Source: Snowflake table `RAW.DAILY_STOCKS`.  
+- `stg_daily_stocks`
+  - Source: Snowflake table `RAW.DAILY_STOCKS_RAW`.
   - Responsibilities:
     - Type casting and basic sanity checks on OHLCV data.
     - Flags invalid records (e.g., negative prices or inconsistent high/low ranges).
     - Keeps ingestion timestamps for late‑arriving overrides.
 
-- `stg_russell3000__constituents`  
-  - Source: Russell 3000 CSV seed files (`seeds/russell3000_*.csv`).  
+- `stg_russell3000__constituents`
+  - Source: Russell 3000 CSV seed files (`seeds/russell3000_*.csv`).
   - Responsibilities:
     - Normalize ticker, company name, sector, and index weights.
     - Track membership and validity dates across multiple snapshots.
 
 #### Intermediate Layer
 
-- `int_russell3000__daily`  
+- `int_russell3000__daily`
   - Joins `stg_daily_stocks` with Russell 3000 constituents.
   - Filters universe down to index members.
-  - Carries forward sector/company metadata and index weights.
+  - Carries forward sector/company/security metadata and index weights.
 
 #### Analytics Marts
 
-<p align="center">
-  <img src="assets/marts_schema.png" width="100%" alt="Marts schema">
-</p>
+```mermaid
+graph TD
+    MS1[MART_STAGING.PREP_SECURITY_DAILY_MOMENTUM] --> F1[MARTS.FCT_SECURITY_DAILY_MOMENTUM]
+    MS2[MART_STAGING.PREP_MARKET_DAILY_BREADTH] --> F2[MARTS.FCT_MARKET_DAILY_BREADTH]
+    MS3[MART_STAGING.PREP_SECTOR_DAILY_BREADTH] --> F3[MARTS.FCT_SECTOR_DAILY_BREADTH]
+    MS4[MART_STAGING.PREP_SECURITY_CURRENT_SNAPSHOT] --> F4[MARTS.FCT_SECURITY_CURRENT_SNAPSHOT]
 
-- `fct_trading_momentum` (incremental fact table)  
-  Daily trading signals and technical indicators:
+    D1[MARTS.DIM_DATE] --> F1
+    D1 --> F2
+    D1 --> F3
+    D1 --> F4
+
+    D2[MARTS.DIM_SECURITY] --> F1
+    D2 --> F4
+    D2H[MARTS.DIM_SECURITY_HISTORY]
+
+    D3[MARTS.DIM_SECTOR] --> F1
+    D3 --> F3
+    D3 --> F4
+    D3 --> D2H
+```
+
+- The marts layer is modeled as a small dimensional fact constellation:
+  - `dim_date`: conformed trading-date dimension.
+  - `dim_security`: current Type 1-style security dimension, one row per ticker.
+  - `dim_security_history`: Type 2 security history dimension, one row per ticker per validity period.
+  - `dim_sector`: conformed sector dimension.
+  - `fct_security_daily_momentum`: security-day fact table for OHLCV and technical momentum measures.
+  - `fct_market_daily_breadth`: market-day aggregate fact table.
+  - `fct_sector_daily_breadth`: sector-day aggregate fact table.
+  - `fct_security_current_snapshot`: latest security snapshot fact for dashboard screening.
+
+- Security dimensions:
+  - `dim_security` provides the current/latest descriptive row for dashboard-friendly joins.
+  - `dim_security_history` preserves historical Russell 3000 constituent attributes using `valid_from`, `valid_to`, and `is_current`.
+
+- `fct_security_daily_momentum` (incremental fact table)
+  Daily security-level signals and technical indicators:
   - Simple Moving Averages: 20, 50, 200‑day (`sma_20`, `sma_50`, `sma_200`)
   - Relative Strength Index (RSI, 14‑day)
   - Golden/Death cross signals
   - 52‑week highs/lows
   - Relative volume vs 20‑day average
 
-- `agg_daily_market_breadth` (aggregated table)  
+- `fct_market_daily_breadth` (aggregate fact table)
   Market‑wide health indicators across the Russell 3000:
   - Advances, declines, unchanged counts and volumes
   - Advance/Decline ratios and cumulative A/D line
@@ -171,7 +207,13 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
   - 52‑week highs/lows counts and a high/low index
   - Aggregate market RSI and simple momentum classification (overbought/oversold/normal)
 
-- `dim_securities_current` (dimension table)  
+- `fct_sector_daily_breadth` (aggregate fact table)
+  Sector-level breadth indicators using the conformed sector dimension:
+  - Advances, declines, unchanged counts and volumes by sector
+  - Percentage of sector constituents above key moving averages
+  - Sector RSI and simple momentum classification
+
+- `fct_security_current_snapshot` (snapshot fact table)
   Latest snapshot per ticker with:
   - Current technical indicators (RSI, SMAs, 52‑week high/low, relative volume)
   - Performance lookbacks (1W, 1M, 3M, YTD returns)
@@ -195,8 +237,8 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
 - Example pages:
   - `streamlit_app.py`: Home page with the latest market breadth snapshot.
   - `1_Market_Breadth.py`: Market breadth trends and key signals.
-  - `2_Universe_Screener.py`: Filterable Russell 3000 snapshot from `dim_securities_current`.
-  - `3_Ticker_Momentum.py`: Ticker‑level momentum and signal history from `fct_trading_momentum`.
+  - `2_Universe_Screener.py`: Filterable Russell 3000 snapshot from `fct_security_current_snapshot` joined to `dim_security`.
+  - `3_Ticker_Momentum.py`: Ticker‑level momentum and signal history from `fct_security_daily_momentum` joined to `dim_security`.
 
 <details>
   <summary>More dashboard views</summary>
@@ -292,7 +334,7 @@ dbt deps
 dbt seed --profiles-dir .
 ```
 
-This loads the Russell 3000 constituent snapshots into Snowflake (`raw_seeds` schema).
+This loads the Russell 3000 constituent snapshots into Snowflake (`SEEDS` schema).
 
 ### 6. Run a historical backfill (optional)
 
@@ -330,7 +372,7 @@ From `data-viz/` (local environment):
    role = "SYSADMIN"
    warehouse = "COMPUTE_WH"
    database = "MARKET"
-   schema = "RAW_MARTS"
+   schema = "MARTS"
    private_key = """-----BEGIN PRIVATE KEY-----
    ... your PEM key here ...
    -----END PRIVATE KEY-----"""
@@ -380,12 +422,17 @@ Use these in the Snowflake UI or via `snowflake_helper.py`:
 
 ```sql
 -- Most recent golden crosses
-SELECT ticker, company, sector
-FROM MARKET.RAW_MARTS.FCT_TRADING_MOMENTUM
-WHERE trade_date = (
-    SELECT MAX(trade_date) FROM MARKET.RAW_MARTS.FCT_TRADING_MOMENTUM
+SELECT
+  s.ticker,
+  s.company,
+  s.sector_name
+FROM MARKET.MARTS.FCT_SECURITY_DAILY_MOMENTUM AS f
+INNER JOIN MARKET.MARTS.DIM_SECURITY AS s
+    ON s.security_key = f.security_key
+WHERE f.trade_date = (
+    SELECT MAX(trade_date) FROM MARKET.MARTS.FCT_SECURITY_DAILY_MOMENTUM
 )
-  AND golden_cross = 1;
+  AND f.golden_cross = 1;
 ```
 
 ```sql
@@ -400,7 +447,7 @@ SELECT
     WHEN pct_market_over_sma50 < 0.2 THEN 'Strong Bearish'
     ELSE 'Neutral'
   END AS market_sentiment
-FROM MARKET.RAW_MARTS.AGG_DAILY_MARKET_BREADTH
+FROM MARKET.MARTS.FCT_MARKET_DAILY_BREADTH
 ORDER BY trade_date DESC
 LIMIT 30;
 ```
@@ -408,14 +455,16 @@ LIMIT 30;
 ```sql
 -- Top performers by sector in the latest snapshot
 SELECT 
-  sector,
-  ticker,
-  latest_close,
-  return_1m,
-  performance_percentile
-FROM MARKET.RAW_MARTS.DIM_SECURITIES_CURRENT
-WHERE performance_percentile > 0.9
-ORDER BY sector, return_1m DESC;
+  s.sector_name,
+  s.ticker,
+  f.latest_close,
+  f.return_1m,
+  f.performance_percentile
+FROM MARKET.MARTS.FCT_SECURITY_CURRENT_SNAPSHOT AS f
+INNER JOIN MARKET.MARTS.DIM_SECURITY AS s
+    ON s.security_key = f.security_key
+WHERE f.performance_percentile > 0.9
+ORDER BY s.sector_name, f.return_1m DESC;
 ```
 
 ## Known Limitations / Future Work

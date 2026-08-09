@@ -15,8 +15,8 @@ def market_data_pipeline():
     """
     Daily ETL/ELT pipeline for Polygon → Snowflake → dbt.
     Steps:
-      1) Extract + load grouped daily aggregates into RAW.DAILY_STOCKS
-      2) Run dbt models (staging → intermediate → marts)
+      1) Extract + land grouped daily aggregates into RAW.DAILY_STOCKS_RAW
+      2) Run dbt models (staging → intermediate → mart_staging → marts)
       3) Run dbt tests
     """
     @task()
@@ -46,12 +46,25 @@ def market_data_pipeline():
         """
 
     @task.bash
+    def run_dbt_mart_staging():
+        return """cd /opt/airflow/dbt/stock_analytics && \
+            dbt run --select mart_staging --profiles-dir .
+        """
+
+    @task.bash
     def run_dbt_tests():
         return """cd /opt/airflow/dbt/stock_analytics && \
             dbt test --profiles-dir .
         """
     
     # Enforce the ELT order: extract → dbt layers → dbt tests
-    extract() >> run_dbt_staging() >> run_dbt_intermediate() >> run_dbt_marts() >> run_dbt_tests()
+    (
+        extract()
+        >> run_dbt_staging()
+        >> run_dbt_intermediate()
+        >> run_dbt_mart_staging()
+        >> run_dbt_marts()
+        >> run_dbt_tests()
+    )
 
 market_data_pipeline()
