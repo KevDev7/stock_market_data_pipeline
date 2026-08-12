@@ -3,8 +3,7 @@ pandas
 pandas-market-calendars
 boto3
 requests
-pyarrow
-snowflake-connector-python[pandas]>=3.10,<5
+snowflake-connector-python>=3.10,<5
 psycopg2-binary
 pendulum
 python-dotenv

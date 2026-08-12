@@ -17,6 +17,7 @@ venv/
 
 # Airflow
 logs/
+**/.user.yml
 airflow_home/
 airflow/.pytest_cache/
 airflow/unittests.cfg

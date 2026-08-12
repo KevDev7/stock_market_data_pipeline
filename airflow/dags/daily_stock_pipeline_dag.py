@@ -11,11 +11,11 @@ DBT_EXECUTABLE = "/home/airflow/.dbt-venv/bin/dbt"
     schedule="0 12 * * 1-5", # Mon–Fri at noon ET
     start_date=datetime(2025, 8, 1, tz=timezone("America/New_York")),
     catchup=False,
-    tags=["etl", "s3", "snowflake", "polygon", "dbt"],
+    tags=["elt", "s3", "snowflake", "polygon", "dbt"],
 )
 def market_data_pipeline():
     """
-    Daily ETL/ELT pipeline for Polygon → S3 → Snowflake → dbt.
+    Daily batch ELT pipeline for Polygon → S3 → Snowflake → dbt.
     Steps:
       1) Extract + archive grouped daily aggregates in Amazon S3
       2) Load the archived object into RAW.DAILY_STOCKS_RAW

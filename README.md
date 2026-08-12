@@ -1,11 +1,11 @@
 # Stock Market Data Analytics Pipeline
 
-A modern data pipeline that ingests, transforms, and analyzes daily U.S. equity market data for the Russell 3000 universe using Polygon.io, Apache Airflow, Snowflake, dbt, and Streamlit.
+A batch ELT pipeline that ingests, transforms, and analyzes daily U.S. equity market data for the Russell 3000 universe using Polygon.io, Amazon S3, Apache Airflow, Snowflake, dbt, and Streamlit.
 
 The goal of this project is to build an end‑to‑end, production‑style analytics stack for equity market research: from raw OHLCV data to technical indicators, market breadth metrics, and interactive dashboards.
 
 <p align="center">
-  <img src="assets/market_breadth.png" width="100%" alt="Market breadth dashboard">
+  <img src="assets/streamlit_app.png" width="100%" alt="Russell 3000 Market Intelligence dashboard">
 </p>
 
 ## Architecture Overview
@@ -38,9 +38,9 @@ graph LR
 
 ## Key Capabilities
 
-- Automated daily ingestion of Polygon grouped daily aggregates into Snowflake.
-- Immutable S3 raw landing for replay before warehouse loading.
-- Trading‑calendar aware scheduling using NYSE market hours (no weekends/holidays).
+- Scheduled weekday ingestion design for Polygon grouped daily aggregates; ingestion is currently paused.
+- Versioned, replayable S3 raw landing before warehouse loading.
+- NYSE trading-calendar-aware date selection that excludes weekends and exchange holidays.
 - Incremental dbt models for technical indicators, with market and sector breadth facts.
 - Ingestion checkpoints in Snowflake (`ADMIN.INGESTION_CHECKPOINTS`) for restartability.
 - Dimensional marts for security‑level, sector‑level, and market‑level analysis.
@@ -72,7 +72,7 @@ stock_market_data_pipeline/
 │   ├── config.py                         # Config loader (Airflow Variables / .env)
 │   ├── extraction.py                     # Polygon API interface (grouped daily)
 │   ├── load.py                           # Archive raw rows in S3, then load Snowflake
-│   ├── extract_load_stocks.py            # Main ETL orchestration logic
+│   ├── extract_load_stocks.py            # Main ingestion orchestration logic
 │   ├── s3_client.py                      # Gzip NDJSON raw archive client
 │   └── snowflake_client.py               # Snowflake connection + tables + checkpoints
 ├── data-viz/
@@ -80,7 +80,8 @@ stock_market_data_pipeline/
 │   ├── pages/                            # Individual dashboard pages
 │   │   ├── 1_Market_Breadth.py
 │   │   ├── 2_Universe_Screener.py
-│   │   └── 3_Ticker_Momentum.py
+│   │   ├── 3_Ticker_Momentum.py
+│   │   └── 4_Sector_Breadth.py
 │   └── utilities/
 │       └── snowflake_helper.py           # Helper for querying Snowflake from Streamlit
 ├── docker-compose.yaml                   # Airflow + Postgres + custom image
@@ -121,7 +122,7 @@ stock_market_data_pipeline/
      `extract()` task calls `src.extract_load_stocks.extract_load_data(days_back_override=1)` to:
         - Determine valid NYSE trading days using `pandas-market-calendars`, with daily runs targeting the last completed trading day.
      - Skip dates already marked as `completed` in `ADMIN.INGESTION_CHECKPOINTS`.
-     - Fetch Polygon data and load into `RAW.DAILY_STOCKS_RAW`.
+     - Fetch Polygon data, archive it in S3, then load that object into `RAW.DAILY_STOCKS_RAW`.
   2. **Transform**  
      Shell tasks run dbt models layer‑by‑layer:
      - `dbt run --select staging`
@@ -240,31 +241,13 @@ graph TD
   - Load a PEM‑encoded RSA private key from `st.secrets`.
   - Establish a Snowflake connection.
   - Run SQL and return `pandas` DataFrames.
-- Market breadth dashboard highlighted at the top of this README.
-- Streamlit entrypoint preview:
-
-<p align="center">
-  <img src="assets/streamlit_app.png" width="100%" alt="Streamlit home dashboard">
-</p>
+- Dashboard overview highlighted at the top of this README.
 - Example pages:
   - `streamlit_app.py`: Home page with the latest market breadth snapshot.
   - `1_Market_Breadth.py`: Market breadth trends and key signals.
   - `2_Universe_Screener.py`: Filterable Russell 3000 snapshot from `fct_security_current_snapshot` joined to `dim_security`.
   - `3_Ticker_Momentum.py`: Ticker‑level momentum and signal history from `fct_security_daily_momentum` joined to `dim_security`.
-
-<details>
-  <summary>More dashboard views</summary>
-
-  <p align="center">
-    <img src="assets/universe_screener.png" width="100%" alt="Universe screener">
-  </p>
-  <p align="center">
-    <img src="assets/ticker_momentum_1.png" width="100%" alt="Ticker momentum (view 1)">
-  </p>
-  <p align="center">
-    <img src="assets/ticker_momentum_2.png" width="100%" alt="Ticker momentum (view 2)">
-  </p>
-</details>
+  - `4_Sector_Breadth.py`: Sector-level breadth, participation, and momentum comparisons.
 
 ## Getting Started
 
@@ -276,13 +259,13 @@ graph TD
   - Database (e.g., `MARKET`)
   - Warehouse (e.g., `COMPUTE_WH`)
   - Role with privileges to create schemas/tables
-- Polygon.io API key
+- Polygon.io API key (required only to resume ingestion)
 - Python 3 (for local runs) – optional but useful
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/stock_market_data_pipeline.git
+git clone https://github.com/KevDev7/stock_market_data_pipeline.git
 cd stock_market_data_pipeline
 ```
 
@@ -309,18 +292,24 @@ Required values:
   - `PRIVATE_KEY_PATH` (path to PEM private key in the Airflow container)
 - AWS:
   - `AWS_REGION`
+  - `AWS_PROFILE` (the dedicated `stock-market-ingestion` profile)
   - `AWS_S3_BUCKET`
   - `AWS_S3_PREFIX`
   - AWS credentials for the dedicated ingestion identity
 - Optional:
-  - `PYTHONPATH=src`
+  - `PYTHONPATH=.`
   - `DBT_PROFILES_DIR=dbt/stock_analytics`
 
 ### 3. Provision the S3 landing integration
 
-1. Run `infra/snowflake/s3_raw_landing.sql`, then use `DESC INTEGRATION STOCK_MARKET_S3_INTEGRATION` to obtain Snowflake's IAM principal and external ID.
-2. Deploy `infra/aws/stock-market-s3-iam.yaml` with an AWS administrator, passing those two trust values. It creates a dedicated ingestion user and the read-only role Snowflake assumes.
-3. Store the ingestion user's AWS credentials outside Git and set the non-secret bucket, prefix, and stage values from `.env.example`.
+The checked-in files under `infra/` document the current deployment and the IAM resources required to recreate its S3 connection. The portfolio environment is already provisioned; do not redeploy the template over its manually created resources.
+
+For a new environment:
+
+1. Create and version an S3 bucket; the CloudFormation template intentionally assumes the bucket already exists.
+2. Replace the account, role, and bucket values in `infra/snowflake/s3_raw_landing.sql`, create the storage integration, then use `DESC INTEGRATION STOCK_MARKET_S3_INTEGRATION` to obtain Snowflake's IAM principal and external ID.
+3. Deploy `infra/aws/stock-market-s3-iam.yaml` with an AWS administrator, passing the bucket name and Snowflake trust values. It creates a dedicated ingestion user and the read-only role Snowflake assumes.
+4. Store only the ingestion profile in Git-ignored `keys/aws-credentials` and `keys/aws-config`; Docker Compose mounts them read-only as secrets. Set the non-secret bucket, prefix, profile, and stage values from `.env.example`.
 
 The S3 bucket and Snowflake `RAW.DAILY_STOCKS_RAW` serve different purposes: S3 is the replayable source archive; the Snowflake table remains the queryable raw warehouse layer.
 
@@ -352,7 +341,7 @@ Once Airflow is initialized, you should see the `market_data_pipeline` DAG.
 
 ### 6. Initialize dbt
 
-Inside the Airflow web container or your local environment:
+Inside an Airflow container or your local environment:
 
 ```bash
 cd dbt/stock_analytics
@@ -368,8 +357,10 @@ The retained Snowflake raw table can reconstruct the historical archive without
 calling Polygon again. Preview the scope first, then run the restartable backfill:
 
 ```bash
-python scripts/backfill_raw_to_s3.py --dry-run
-python scripts/backfill_raw_to_s3.py
+docker compose run --rm --entrypoint python airflow-scheduler \
+  /opt/airflow/scripts/backfill_raw_to_s3.py --dry-run
+docker compose run --rm --entrypoint python airflow-scheduler \
+  /opt/airflow/scripts/backfill_raw_to_s3.py
 ```
 
 This reconstruction preserves the retained raw rows and operational metadata; it
@@ -502,7 +493,7 @@ ORDER BY s.sector_name, f.return_1m DESC;
 ## Known Limitations / Future Work
 
 - **Corporate actions:**  
-  Polygon’s `adjusted=true` flag ensures splits/dividends are reflected for the requested date, but the pipeline does not currently re‑ingest historical data when new corporate actions are applied retroactively. This can temporarily distort indicators around split dates until history is refreshed.
+  The pipeline requests Polygon aggregates with `adjusted=true`, but it does not automatically re-ingest history when adjusted values change retroactively. Indicators can therefore remain based on the retained historical snapshot until a backfill is run.
 
 - **Universe coverage:**  
   Focused on Russell 3000 constituents via seeded snapshots. Additional universes (e.g., sector ETFs, custom watchlists) would require new seeds and joins.

@@ -15,7 +15,7 @@ models:
       Derived analytics fields such as yesterday’s close and consecutive
       trading days are computed with incremental-safe logic.
 
-      Update Frequency: Daily (after market close)
+      Intended Cadence: One scheduled weekday run; ingestion is currently paused
       Grain: One row per ticker per trade_date
       History: 2+ years
       Materialization: Incremental
@@ -102,9 +102,8 @@ models:
 
       - name: consecutive_trading_days
         description: |
-          Running count of consecutive trading days for the ticker
-          within the dataset. Resets if the ticker exits and re-enters
-          the index.
+          Running count of retained daily observations for the ticker
+          within the enriched dataset.
 
       - name: yesterday_close
         description: |
@@ -130,5 +129,4 @@ models:
           column_name: index_weight
           min_value: 0
           max_value: 10
-
 

@@ -1,5 +1,5 @@
 # src/load.py
-# Lands grouped daily Polygon data into Snowflake with checkpoint tracking.
+# Archives grouped daily Polygon data in S3, then loads Snowflake RAW.
 
 import json
 import pandas as pd
@@ -12,7 +12,7 @@ SOURCE_NAME = "polygon_grouped_daily"
 
 def load_data(df, date_str, run_id, snowflake_client=None, s3_client=None):
     """
-    Load extracted Polygon data into Snowflake and record checkpoints.
+    Archive extracted Polygon data in S3, load it into Snowflake, and checkpoint it.
 
     Args:
         df (pd.DataFrame): DataFrame returned by the Polygon API.

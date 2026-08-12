@@ -11,7 +11,7 @@ from src.config import AWS
 
 
 class S3RawClient:
-    """Archives and retrieves immutable raw landing records in Amazon S3."""
+    """Archives and retrieves versioned raw landing records in Amazon S3."""
 
     def __init__(self, bucket=None, prefix=None, region=None, client=None):
         self.bucket = bucket or AWS["s3_bucket"]
@@ -23,7 +23,7 @@ class S3RawClient:
         )
 
     def archive_dataframe(self, df, date_str, run_id):
-        """Write one immutable gzip NDJSON object and return its metadata."""
+        """Write one gzip NDJSON object and return its archive metadata."""
         object_key = self.object_key(date_str, run_id)
         body = self._encode_dataframe(df)
         checksum = hashlib.sha256(body).hexdigest()
