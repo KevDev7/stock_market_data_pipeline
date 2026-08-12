@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: IAM roles for the stock-market S3 raw landing pipeline.
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: stock-market-data-pipeline-645968351825-us-east-1
+  RawPrefix:
+    Type: String
+    Default: raw/polygon/grouped-daily
+  SnowflakePrincipalArn:
+    Type: String
+    Default: arn:aws:iam::819481466467:user/23q51000-s
+  SnowflakeExternalId:
+    Type: String
+    NoEcho: true
+
+Resources:
+  StockMarketIngestionUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: stock-market-ingestion
+      Policies:
+        - PolicyName: StockMarketRawLandingReadWrite
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketLocation
+                  - s3:ListBucket
+                Resource: !Sub arn:${AWS::Partition}:s3:::${BucketName}
+                Condition:
+                  StringLike:
+                    s3:prefix:
+                      - !Ref RawPrefix
+                      - !Sub "${RawPrefix}/*"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub arn:${AWS::Partition}:s3:::${BucketName}/${RawPrefix}/*
+      Tags:
+        - Key: Project
+          Value: stock-market-data-pipeline
+
+  SnowflakeRawReaderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: snowflake-stock-market-raw-reader
+      Description: Allows Snowflake to read stock-market raw landing objects.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Ref SnowflakePrincipalArn
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref SnowflakeExternalId
+      Policies:
+        - PolicyName: SnowflakeStockMarketRawReadOnly
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketLocation
+                  - s3:ListBucket
+                Resource: !Sub arn:${AWS::Partition}:s3:::${BucketName}
+                Condition:
+                  StringLike:
+                    s3:prefix:
+                      - !Ref RawPrefix
+                      - !Sub "${RawPrefix}/*"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: !Sub arn:${AWS::Partition}:s3:::${BucketName}/${RawPrefix}/*
+      Tags:
+        - Key: Project
+          Value: stock-market-data-pipeline
+
+Outputs:
+  StockMarketIngestionUserArn:
+    Value: !GetAtt StockMarketIngestionUser.Arn
+  SnowflakeRawReaderRoleArn:
+    Value: !GetAtt SnowflakeRawReaderRole.Arn
