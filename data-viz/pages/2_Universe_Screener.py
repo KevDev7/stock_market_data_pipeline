@@ -1,3 +1,4 @@
+import plotly.express as px
 import streamlit as st
 
 from utilities.dashboard_helpers import (
@@ -7,7 +8,7 @@ from utilities.dashboard_helpers import (
     render_data_freshness,
     render_page_intro,
 )
-from utilities.snowflake_helper import query_snowflake
+from utilities.snowflake_helper import qualified_table, query_snowflake
 
 st.set_page_config(page_title="Universe Screener", layout="wide")
 
@@ -19,10 +20,15 @@ render_page_intro(
 )
 
 sector_query = """
-    SELECT DISTINCT SECTOR
-    FROM MARKET.RAW_MARTS.DIM_SECURITIES_CURRENT
-    ORDER BY SECTOR
-"""
+    SELECT DISTINCT s.SECTOR_NAME AS SECTOR
+    FROM {snapshot_table} AS f
+    INNER JOIN {securities_table} AS s
+        ON s.SECURITY_KEY = f.SECURITY_KEY
+    ORDER BY SECTOR_NAME
+""".format(
+    snapshot_table=qualified_table("FCT_SECURITY_CURRENT_SNAPSHOT"),
+    securities_table=qualified_table("DIM_SECURITY"),
+)
 sectors_df = query_snowflake(sector_query)
 sectors = sectors_df["SECTOR"].dropna().tolist()
 
@@ -55,54 +61,56 @@ row_limit = st.sidebar.number_input(
     step=100,
 )
 
-conditions = [f"LATEST_RSI BETWEEN {rsi_min} AND {rsi_max}"]
+conditions = [f"f.LATEST_RSI BETWEEN {rsi_min} AND {rsi_max}"]
 
 if selected_sectors:
     sector_list = ", ".join(f"'{s}'" for s in selected_sectors)
-    conditions.append(f"SECTOR IN ({sector_list})")
+    conditions.append(f"s.SECTOR_NAME IN ({sector_list})")
 
 if apply_return_filter:
-    conditions.append(f"RETURN_1M >= {min_return_1m_pct / 100}")
+    conditions.append(f"f.RETURN_1M >= {min_return_1m_pct / 100}")
 
 if only_over_sma50:
-    conditions.append("OVER_SMA50 = 1")
+    conditions.append("f.OVER_SMA50 = 1")
 
 if only_golden_cross:
-    conditions.append("HAS_GOLDEN_CROSS_ACTIVE = 1")
+    conditions.append("f.HAS_GOLDEN_CROSS_ACTIVE = 1")
 
 if ticker_search.strip():
     safe_search = ticker_search.replace("'", "''")
-    conditions.append(f"TICKER ILIKE '%{safe_search}%'")
+    conditions.append(f"s.TICKER ILIKE '%{safe_search}%'")
 
 where_clause = "WHERE " + " AND ".join(conditions)
 
 query = f"""
     SELECT
-        TICKER,
-        COMPANY,
-        SECTOR,
-        LATEST_TRADE_DATE,
-        LATEST_CLOSE,
-        PRICE_CHANGE_1D,
-        RETURN_1D,
-        RETURN_1W,
-        RETURN_1M,
-        RETURN_3M,
-        RETURN_YTD,
-        LATEST_RSI,
-        LATEST_SMA20,
-        LATEST_SMA50,
-        LATEST_SMA200,
-        OVER_SMA50,
-        HAS_GOLDEN_CROSS_ACTIVE,
-        DAYS_SINCE_LAST_GOLDEN_CROSS,
-        PCT_DISTANCE_FROM_52WEEK_HIGH,
-        PCT_DISTANCE_FROM_52WEEK_LOW,
-        AVG_VOLUME_20D,
-        VOLATILITY_20D
-    FROM MARKET.RAW_MARTS.DIM_SECURITIES_CURRENT
+        s.TICKER,
+        s.COMPANY,
+        s.SECTOR_NAME AS SECTOR,
+        f.LATEST_TRADE_DATE,
+        f.LATEST_CLOSE,
+        f.PRICE_CHANGE_1D,
+        f.RETURN_1D,
+        f.RETURN_1W,
+        f.RETURN_1M,
+        f.RETURN_3M,
+        f.RETURN_YTD,
+        f.LATEST_RSI,
+        f.LATEST_SMA20,
+        f.LATEST_SMA50,
+        f.LATEST_SMA200,
+        f.OVER_SMA50,
+        f.HAS_GOLDEN_CROSS_ACTIVE,
+        f.DAYS_SINCE_LAST_GOLDEN_CROSS,
+        f.PCT_DISTANCE_FROM_52WEEK_HIGH,
+        f.PCT_DISTANCE_FROM_52WEEK_LOW,
+        f.AVG_VOLUME_20D,
+        f.VOLATILITY_20D
+    FROM {qualified_table("FCT_SECURITY_CURRENT_SNAPSHOT")} AS f
+    INNER JOIN {qualified_table("DIM_SECURITY")} AS s
+        ON s.SECURITY_KEY = f.SECURITY_KEY
     {where_clause}
-    ORDER BY RETURN_1M DESC
+    ORDER BY f.RETURN_1M DESC
     LIMIT {row_limit}
 """
 
@@ -125,6 +133,70 @@ summary_col3.metric(
     "% Over SMA50",
     format_return(df["over_sma50"].mean()),
 )
+
+st.markdown("---")
+st.markdown("**Visual Summary**")
+
+chart_col1, chart_col2 = st.columns(2)
+
+with chart_col1:
+    sector_summary = (
+        df.groupby("sector", dropna=False)
+        .agg(
+            ticker_count=("ticker", "count"),
+            median_return_1m=("return_1m", "median"),
+        )
+        .reset_index()
+        .sort_values("median_return_1m", ascending=False)
+    )
+    sector_summary["median_return_1m_pct"] = sector_summary["median_return_1m"] * 100
+    fig = px.bar(
+        sector_summary,
+        x="median_return_1m_pct",
+        y="sector",
+        orientation="h",
+        color="ticker_count",
+        color_continuous_scale="Blues",
+        title="Median 1M Return by Sector",
+        labels={
+            "median_return_1m_pct": "Median 1M Return %",
+            "sector": "",
+            "ticker_count": "Rows",
+        },
+    )
+    fig.update_layout(
+        height=360,
+        yaxis={"categoryorder": "total ascending"},
+        margin=dict(l=10, r=10, t=50, b=10),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+with chart_col2:
+    plot_df = df.dropna(subset=["return_1m", "latest_rsi"]).copy()
+    plot_df["return_1m_pct"] = plot_df["return_1m"] * 100
+    fig = px.scatter(
+        plot_df,
+        x="return_1m_pct",
+        y="latest_rsi",
+        color="sector",
+        hover_name="ticker",
+        hover_data=["company", "latest_close"],
+        title="1M Return vs RSI",
+        labels={
+            "return_1m_pct": "1M Return %",
+            "latest_rsi": "Latest RSI",
+            "sector": "Sector",
+        },
+    )
+    fig.add_hline(y=70, line_dash="dot", line_color="#D92D20")
+    fig.add_hline(y=30, line_dash="dot", line_color="#039855")
+    fig.add_vline(x=0, line_dash="dot", line_color="#667085")
+    fig.update_layout(
+        height=360,
+        legend_title=None,
+        margin=dict(l=10, r=10, t=50, b=10),
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 st.markdown("**Latest Snapshot**")
@@ -176,7 +248,7 @@ format_map = {
 
 st.dataframe(
     df[display_columns].style.format(format_map),
-    use_container_width=True,
+    width="stretch",
 )
 
 render_data_freshness()

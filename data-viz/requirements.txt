@@ -1,6 +1,5 @@
-streamlit
-pandas
-snowflake-connector-python
-cryptography
-python-dotenv
-plotly
+streamlit==1.50.0
+pandas==2.3.3
+snowflake-connector-python==3.18.0
+cryptography==46.0.0
+plotly==6.9.0
