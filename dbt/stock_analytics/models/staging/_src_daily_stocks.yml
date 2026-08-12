@@ -6,8 +6,8 @@ version: 2
 sources:
   - name: raw_market
     description: "Raw layer in Snowflake containing Polygon daily stock data"
-    database: MARKET
-    schema: RAW
+    database: "{{ env_var('SNOWFLAKE_DATABASE', 'MARKET') }}"
+    schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'RAW') }}"
     tables:
-      - name: DAILY_STOCKS
-        description: "Raw table populated by the Polygon → Snowflake ELT pipeline"
+      - name: DAILY_STOCKS_RAW
+        description: "Raw Polygon grouped daily rows with ingestion metadata"

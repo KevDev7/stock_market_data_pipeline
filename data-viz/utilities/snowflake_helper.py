@@ -39,6 +39,18 @@ def get_snowflake_connection():
     )
 
 
+def qualified_table(table_name: str) -> str:
+    """Build a fully qualified table name from Streamlit Snowflake secrets."""
+    if not table_name.replace("_", "").isalnum():
+        raise ValueError(f"Invalid table name: {table_name}")
+
+    snowflake_secrets = st.secrets["snowflake"]
+    database = snowflake_secrets["database"]
+    schema = snowflake_secrets.get("mart_schema", "MARTS")
+    return f"{database}.{schema}.{table_name}"
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
 def query_snowflake(sql: str) -> pd.DataFrame:
     """Run SQL query against Snowflake and return pandas DataFrame."""
     conn = get_snowflake_connection()

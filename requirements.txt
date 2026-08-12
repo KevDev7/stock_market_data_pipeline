@@ -4,8 +4,6 @@ pandas-market-calendars
 requests
 pyarrow
 snowflake-connector-python[pandas]>=3.10,<5
-dbt-core==1.7.*
-dbt-snowflake==1.7.*
 psycopg2-binary
 pendulum
 python-dotenv

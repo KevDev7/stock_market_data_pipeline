@@ -1,0 +1,123 @@
+version: 2
+
+models:
+  - name: prep_security_daily_momentum
+    description: "Gold staging model that prepares security-day momentum measures before dimensional publication."
+    columns:
+      - name: ticker
+        tests:
+          - not_null
+      - name: trade_date
+        tests:
+          - not_null
+      - name: volume
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+      - name: rel_vol
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: 0
+              row_condition: "rel_vol IS NOT NULL"
+              strictly: true
+      - name: avg_gain_14
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: 0
+              row_condition: "avg_gain_14 IS NOT NULL"
+      - name: avg_loss_14
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: -1e-8
+              row_condition: "avg_loss_14 IS NOT NULL"
+      - name: rsi
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              inclusive: true
+              where: "rsi IS NOT NULL"
+    tests:
+      - unique:
+          column_name: "ticker || '-' || TO_VARCHAR(trade_date)"
+          config:
+            where: "trade_date >= DATEADD(day, -7, CURRENT_DATE())"
+      - dbt_expectations.expect_table_row_count_to_equal_other_table:
+          compare_model: ref('int_russell3000__daily')
+
+  - name: prep_market_daily_breadth
+    description: "Gold staging model that prepares daily market-wide breadth measures."
+    columns:
+      - name: trade_date
+        tests:
+          - not_null
+          - unique
+      - name: stocks_traded
+        tests:
+          - not_null
+      - name: pct_market_over_sma20
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: 0
+              row_condition: "pct_market_over_sma20 IS NOT NULL"
+      - name: market_rsi
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              inclusive: false
+      - name: ad_percentage
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: -1
+              max_value: 1
+              inclusive: false
+      - name: up_down_volume_ratio
+        tests:
+          - dbt_expectations.expect_column_min_to_be_between:
+              min_value: 0
+              row_condition: "up_down_volume_ratio IS NOT NULL"
+      - name: high_low_index
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: false
+
+  - name: prep_sector_daily_breadth
+    description: "Gold staging model that prepares daily sector-level breadth measures."
+    columns:
+      - name: trade_date
+        tests:
+          - not_null
+      - name: sector
+        tests:
+          - not_null
+      - name: stocks_traded
+        tests:
+          - not_null
+    tests:
+      - unique:
+          column_name: "sector || '-' || TO_VARCHAR(trade_date)"
+
+  - name: prep_security_current_snapshot
+    description: "Gold staging model that prepares latest security snapshot measures."
+    columns:
+      - name: ticker
+        tests:
+          - not_null
+          - unique
+      - name: latest_trade_date
+        tests:
+          - not_null
+      - name: performance_percentile
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 2000
+          max_value: 3000

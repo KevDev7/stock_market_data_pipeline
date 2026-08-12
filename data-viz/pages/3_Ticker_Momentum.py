@@ -1,4 +1,6 @@
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import streamlit as st
 
 from utilities.dashboard_helpers import (
@@ -10,7 +12,7 @@ from utilities.dashboard_helpers import (
     render_data_freshness,
     render_page_intro,
 )
-from utilities.snowflake_helper import query_snowflake
+from utilities.snowflake_helper import qualified_table, query_snowflake
 
 st.set_page_config(page_title="Ticker Momentum", layout="wide")
 
@@ -23,13 +25,13 @@ render_page_intro(
 
 ticker_query = """
     SELECT DISTINCT TICKER
-    FROM MARKET.RAW_MARTS.DIM_SECURITIES_CURRENT
+    FROM {securities_table}
     ORDER BY TICKER
-"""
+""".format(securities_table=qualified_table("DIM_SECURITY"))
 date_query = """
     SELECT MIN(TRADE_DATE) AS MIN_DATE, MAX(TRADE_DATE) AS MAX_DATE
-    FROM MARKET.RAW_MARTS.FCT_TRADING_MOMENTUM
-"""
+    FROM {momentum_table}
+""".format(momentum_table=qualified_table("FCT_SECURITY_DAILY_MOMENTUM"))
 
 tickers_df = query_snowflake(ticker_query)
 dates_df = query_snowflake(date_query)
@@ -71,28 +73,30 @@ row_limit = st.sidebar.number_input(
 
 query = f"""
     SELECT
-        TICKER,
-        TRADE_DATE,
-        OPEN,
-        HIGH,
-        LOW,
-        CLOSE,
-        YESTERDAY_CLOSE,
-        VOLUME,
-        SMA_20,
-        SMA_50,
-        SMA_200,
-        RSI,
-        REL_VOL,
-        HIGH_52WEEK,
-        LOW_52WEEK,
-        BULLISH_CROSSOVER,
-        GOLDEN_CROSS,
-        DEATH_CROSS
-    FROM MARKET.RAW_MARTS.FCT_TRADING_MOMENTUM
-    WHERE TICKER = '{selected_ticker}'
-      AND TRADE_DATE BETWEEN '{start_date}' AND '{end_date}'
-    ORDER BY TRADE_DATE DESC
+        s.TICKER,
+        f.TRADE_DATE,
+        f.OPEN,
+        f.HIGH,
+        f.LOW,
+        f.CLOSE,
+        f.YESTERDAY_CLOSE,
+        f.VOLUME,
+        f.SMA_20,
+        f.SMA_50,
+        f.SMA_200,
+        f.RSI,
+        f.REL_VOL,
+        f.HIGH_52WEEK,
+        f.LOW_52WEEK,
+        f.BULLISH_CROSSOVER,
+        f.GOLDEN_CROSS,
+        f.DEATH_CROSS
+    FROM {qualified_table("FCT_SECURITY_DAILY_MOMENTUM")} AS f
+    INNER JOIN {qualified_table("DIM_SECURITY")} AS s
+        ON s.SECURITY_KEY = f.SECURITY_KEY
+    WHERE s.TICKER = '{selected_ticker}'
+      AND f.TRADE_DATE BETWEEN '{start_date}' AND '{end_date}'
+    ORDER BY f.TRADE_DATE DESC
     LIMIT {row_limit}
 """
 
@@ -121,10 +125,80 @@ col4.metric("Rel Vol", format_ratio(latest["rel_vol"]))
 col5.metric("Signal", signal_label)
 
 st.markdown("---")
-st.markdown("**Price + SMA Trends**")
+st.markdown("**Price, Volume, and RSI Trends**")
 
-trend_df = df.sort_values("trade_date").set_index("trade_date")
-st.line_chart(trend_df[["close", "sma_20", "sma_50", "sma_200"]])
+trend_df = df.sort_values("trade_date").copy()
+fig = make_subplots(
+    rows=3,
+    cols=1,
+    shared_xaxes=True,
+    row_heights=[0.56, 0.22, 0.22],
+    vertical_spacing=0.04,
+    subplot_titles=("Close with SMAs", "Volume", "RSI"),
+)
+fig.add_trace(go.Scatter(
+    x=trend_df["trade_date"],
+    y=trend_df["close"],
+    mode="lines",
+    name="Close",
+), row=1, col=1)
+for col, label in [
+    ("sma_20", "SMA20"),
+    ("sma_50", "SMA50"),
+    ("sma_200", "SMA200"),
+]:
+    fig.add_trace(go.Scatter(
+        x=trend_df["trade_date"],
+        y=trend_df[col],
+        mode="lines",
+        name=label,
+    ), row=1, col=1)
+
+fig.add_trace(go.Bar(
+    x=trend_df["trade_date"],
+    y=trend_df["volume"],
+    name="Volume",
+    marker_color="#98A2B3",
+), row=2, col=1)
+
+fig.add_trace(go.Scatter(
+    x=trend_df["trade_date"],
+    y=trend_df["rsi"],
+    mode="lines",
+    name="RSI",
+    line=dict(color="#7A5AF8"),
+), row=3, col=1)
+fig.add_hline(y=70, row=3, col=1, line_dash="dot", line_color="#D92D20")
+fig.add_hline(y=30, row=3, col=1, line_dash="dot", line_color="#039855")
+
+golden_crosses = trend_df[trend_df["golden_cross"] == 1]
+death_crosses = trend_df[trend_df["death_cross"] == 1]
+if not golden_crosses.empty:
+    fig.add_trace(go.Scatter(
+        x=golden_crosses["trade_date"],
+        y=golden_crosses["close"],
+        mode="markers",
+        name="Golden Cross",
+        marker=dict(symbol="triangle-up", size=11, color="#039855"),
+    ), row=1, col=1)
+if not death_crosses.empty:
+    fig.add_trace(go.Scatter(
+        x=death_crosses["trade_date"],
+        y=death_crosses["close"],
+        mode="markers",
+        name="Death Cross",
+        marker=dict(symbol="triangle-down", size=11, color="#D92D20"),
+    ), row=1, col=1)
+
+fig.update_layout(
+    height=720,
+    legend_title=None,
+    margin=dict(l=10, r=10, t=50, b=10),
+)
+fig.update_yaxes(title_text="Price", row=1, col=1)
+fig.update_yaxes(title_text="Volume", row=2, col=1)
+fig.update_yaxes(title_text="RSI", range=[0, 100], row=3, col=1)
+st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 st.markdown("**Latest Rows**")
@@ -146,6 +220,6 @@ format_map = {
     "low_52week": "${:,.2f}",
 }
 
-st.dataframe(df.style.format(format_map), use_container_width=True)
+st.dataframe(df.style.format(format_map), width="stretch")
 render_data_freshness()
 st.caption("Returns and percent metrics are stored as decimals in the marts.")

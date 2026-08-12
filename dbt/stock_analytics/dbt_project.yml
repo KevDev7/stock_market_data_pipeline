@@ -25,41 +25,44 @@ clean-targets:
 # Seed Configuration
 seeds:
   stock_analytics:
-    +schema: raw_seeds
+    +schema: SEEDS
     +quote_columns: false
     russell3000_2024_1231:
-      column_types: &russell_seed_types
+      +column_types: &russell_seed_types
         Ticker: text
         Name: text
         Sector: text
         Asset_Class: text
-        Market_Value: float
-        Weight: float
-        Notional_Value: float
-        Quantity: float
-        Price: float
+        Market_Value: text
+        Weight: text
+        Notional_Value: text
+        Quantity: text
+        Price: text
         Location: text
         Exchange: text
         Currency: text
-        FX_Rate: float
+        FX_Rate: text
         Market_Currency: text
         Accrual_Date: text
     russell3000_2025_0630:
-      column_types: *russell_seed_types
+      +column_types: *russell_seed_types
     russell3000_2025_0829:
-      column_types: *russell_seed_types
+      +column_types: *russell_seed_types
     russell3000_2025_0916:
-      column_types: *russell_seed_types
+      +column_types: *russell_seed_types
 
 # Model defauts
 models:
   stock_analytics:
     staging:
-      +schema: raw_staging
+      +schema: STAGING
       +materialized: view
     intermediate:
-      +schema: raw_intermediate
+      +schema: INTERMEDIATE
+      +materialized: table
+    mart_staging:
+      +schema: MART_STAGING
       +materialized: table
     marts:
-      +schema: raw_marts
+      +schema: MARTS
       +materialized: table

@@ -61,6 +61,21 @@ models:
       - name: sector
         description: "Industry sector"
 
+      - name: asset_class
+        description: "Asset class from the Russell 3000 source file"
+
+      - name: location
+        description: "Issuer location from the Russell 3000 source file"
+
+      - name: exchange
+        description: "Primary exchange from the Russell 3000 source file"
+
+      - name: currency
+        description: "Security currency from the Russell 3000 source file"
+
+      - name: market_currency
+        description: "Market currency from the Russell 3000 source file"
+
       - name: market_value
         description: "Market value of the company at the time of index composition"
 

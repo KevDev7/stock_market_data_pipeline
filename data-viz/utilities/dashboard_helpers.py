@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from utilities.snowflake_helper import query_snowflake
+from utilities.snowflake_helper import qualified_table, query_snowflake
 
 
 def apply_dashboard_style():
@@ -74,12 +74,12 @@ def format_date(value):
 def get_data_freshness():
     date_query = """
         SELECT MAX(TRADE_DATE) AS DATA_THROUGH
-        FROM MARKET.RAW_MARTS.AGG_DAILY_MARKET_BREADTH
-    """
+        FROM {breadth_table}
+    """.format(breadth_table=qualified_table("FCT_MARKET_DAILY_BREADTH"))
     count_query = """
         SELECT COUNT(*) AS TICKER_COUNT
-        FROM MARKET.RAW_MARTS.DIM_SECURITIES_CURRENT
-    """
+        FROM {snapshot_table}
+    """.format(snapshot_table=qualified_table("FCT_SECURITY_CURRENT_SNAPSHOT"))
 
     date_df = query_snowflake(date_query)
     count_df = query_snowflake(count_query)

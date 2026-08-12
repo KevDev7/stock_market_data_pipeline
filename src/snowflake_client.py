@@ -7,6 +7,7 @@ from snowflake.connector import connect
 from snowflake.connector.pandas_tools import write_pandas
 from src.config import SNOWFLAKE
 import os
+import uuid
 
 
 class SnowflakeClient:
@@ -59,27 +60,15 @@ class SnowflakeClient:
         self.cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SNOWFLAKE['schema']};")
         self.cursor.execute("CREATE SCHEMA IF NOT EXISTS ADMIN;")  # keep for checkpoints
 
-        # Stock data table (created in configured schema)
+        # Raw Polygon row landing table. dbt owns market-data parsing and typing.
         self.cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {SNOWFLAKE['schema']}.DAILY_STOCKS (
-                T STRING,
-                V FLOAT,
-                VW FLOAT,
-                O FLOAT,
-                C FLOAT,
-                H FLOAT,
-                L FLOAT,
-                N INT,
-                TS TIMESTAMP_NTZ,
-                DATE DATE,
+            CREATE TABLE IF NOT EXISTS {SNOWFLAKE['schema']}.DAILY_STOCKS_RAW (
+                API_DATE DATE,
+                RUN_ID STRING,
+                SOURCE STRING,
+                RAW_PAYLOAD STRING,
                 INGESTED_AT TIMESTAMP_NTZ
             );
-        """)
-
-        # Self-healing safeguard (in case table exists without TS)
-        self.cursor.execute(f"""
-            ALTER TABLE {SNOWFLAKE['schema']}.DAILY_STOCKS
-            ADD COLUMN IF NOT EXISTS TS TIMESTAMP_NTZ;
         """)
 
         # Checkpoints table (still lives in ADMIN schema)
@@ -99,6 +88,15 @@ class SnowflakeClient:
         self.conn.commit()
         print("Verified table existence.")
 
+    def _validate_identifier(self, identifier: str):
+        """Validate simple Snowflake identifiers used by internal SQL templates."""
+        if not identifier.replace("_", "").isalnum():
+            raise ValueError(f"Invalid Snowflake identifier: {identifier}")
+
+    def _qualified_table(self, table_name: str) -> str:
+        """Return a fully qualified table name for known internal table identifiers."""
+        self._validate_identifier(table_name)
+        return f"{SNOWFLAKE['database']}.{SNOWFLAKE['schema']}.{table_name}"
 
     def write_dataframe(self, df: pd.DataFrame, table_name: str):
         """Write a pandas DataFrame into Snowflake using write_pandas()."""
@@ -122,6 +120,85 @@ class SnowflakeClient:
         else:
             print(f"Failed to load data into {table_name}.")
             return False, 0
+
+    def replace_dataframe_for_date(
+        self,
+        df: pd.DataFrame,
+        table_name: str,
+        date_str: str,
+        date_column: str = "DATE"
+    ):
+        """
+        Replace one trading date in the target table.
+
+        Polygon grouped daily aggregates are a full-day snapshot, so replacing the
+        date keeps retries idempotent instead of appending duplicate rows.
+        """
+        if df is None or df.empty:
+            print("DataFrame is empty; skipping load.")
+            return False, 0
+
+        qualified_table = self._qualified_table(table_name)
+        self._validate_identifier(date_column)
+        temp_table = f"TMP_{table_name}_{uuid.uuid4().hex[:12].upper()}"
+        self._validate_identifier(temp_table)
+
+        for col in df.columns:
+            self._validate_identifier(col)
+        columns = ", ".join(df.columns)
+
+        try:
+            self.cursor.execute(
+                f"CREATE TEMPORARY TABLE {SNOWFLAKE['schema']}.{temp_table} "
+                f"LIKE {qualified_table}"
+            )
+
+            success, _, staged_rows, _ = write_pandas(
+                conn=self.conn,
+                df=df,
+                table_name=temp_table,
+                database=SNOWFLAKE["database"],
+                schema=SNOWFLAKE["schema"],
+                quote_identifiers=False,
+                use_logical_type=True
+            )
+
+            if not success:
+                print(f"Failed to stage data for {date_str} into {temp_table}.")
+                return False, 0
+
+            self.cursor.execute("BEGIN")
+            self.cursor.execute(
+                f"DELETE FROM {qualified_table} WHERE {date_column} = %s",
+                (date_str,)
+            )
+            self.cursor.execute(
+                f"""
+                INSERT INTO {qualified_table} ({columns})
+                SELECT {columns}
+                FROM {SNOWFLAKE['schema']}.{temp_table}
+                """
+            )
+            self.cursor.execute("COMMIT")
+
+            print(
+                f"Atomically replaced {staged_rows} rows for {date_str} "
+                f"in {table_name}."
+            )
+            return True, staged_rows
+        except Exception:
+            try:
+                self.cursor.execute("ROLLBACK")
+            except Exception:
+                pass
+            raise
+        finally:
+            try:
+                self.cursor.execute(
+                    f"DROP TABLE IF EXISTS {SNOWFLAKE['schema']}.{temp_table}"
+                )
+            except Exception:
+                pass
 
     def record_checkpoint(self, run_id, api_date, status, total_tickers=None,
                           rows_inserted=None, error_message=None):

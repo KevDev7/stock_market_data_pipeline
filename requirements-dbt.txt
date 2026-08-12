@@ -1,0 +1,3 @@
+# dbt runs in an isolated virtual environment inside the Airflow image.
+dbt-core==1.7.*
+dbt-snowflake==1.7.*
