@@ -1,5 +1,5 @@
 # src/extract_load_stocks.py
-# Pipeline entrypoint for extracting grouped daily data from Polygon and loading it into Snowflake with ingestion checkpoints.
+# Pipeline entrypoint for Polygon extraction, S3 archival, and Snowflake loading.
 
 import time
 import pendulum
@@ -19,7 +19,7 @@ def get_trading_days(start_date, end_date, calendar_name="NYSE"):
 
 
 def get_completed_dates():
-    """Retrieve dates already loaded into Snowflake."""
+    """Retrieve dates already completed through S3 and Snowflake loading."""
     client = SnowflakeClient()
     completed = client.get_completed_dates()
     client.close()
@@ -28,8 +28,8 @@ def get_completed_dates():
 
 def extract_load_data(years_back=2, days_back_override=None):
     """
-    Main pipeline entrypoint: fetch grouped daily data from Polygon,
-    load it into Snowflake, and record ingestion checkpoints.
+    Fetch Polygon grouped daily data, archive it in S3, load that object into
+    Snowflake RAW, and record ingestion checkpoints.
     """
     run_id = pendulum.now().strftime("%Y%m%d_%H%M%S")
     print(f"\nStarting historical stock data load | run_id = {run_id}")

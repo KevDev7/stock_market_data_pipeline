@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: IAM roles for the stock-market S3 raw landing pipeline.
+Description: IAM identities for a stock-market raw landing bucket that already exists.
 
 Parameters:
   BucketName:

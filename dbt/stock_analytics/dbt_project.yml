@@ -14,7 +14,6 @@ model-paths: ["models"]
 analysis-paths: ["analyses"]
 macro-paths: ["macros"]
 seed-paths: ["seeds"]
-snapshot-paths: ["snapshots"]
 test-paths: ["tests"]
 
 # Folders removed when running `dbt clean`
