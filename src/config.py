@@ -34,4 +34,15 @@ SNOWFLAKE = {
     "database": get_config_value("SNOWFLAKE_DATABASE"),
     "schema": get_config_value("SNOWFLAKE_SCHEMA"),
     "private_key_path": get_config_value("PRIVATE_KEY_PATH"),
+    "s3_stage": get_config_value(
+        "SNOWFLAKE_S3_STAGE", "MARKET.RAW.POLYGON_RAW_STAGE"
+    ),
+}
+
+AWS = {
+    "region": get_config_value("AWS_REGION", "us-east-1"),
+    "s3_bucket": get_config_value("AWS_S3_BUCKET"),
+    "s3_prefix": get_config_value(
+        "AWS_S3_PREFIX", "raw/polygon/grouped-daily"
+    ),
 }

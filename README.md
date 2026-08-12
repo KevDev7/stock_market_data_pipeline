@@ -12,19 +12,24 @@ The goal of this project is to build an end‑to‑end, production‑style analy
 
 ```mermaid
 graph LR
-    A[Polygon API] -->|Daily Extract| B[Apache Airflow]
-    B -->|Load| C[Snowflake RAW.DAILY_STOCKS_RAW]
-    C -->|dbt Transform| D[Snowflake STAGING]
+    A[Polygon API] -->|Daily Extract| B[Amazon S3 Raw Landing]
+    B -->|COPY INTO| C[Snowflake RAW]
+    C -->|dbt| D[Snowflake STAGING]
     D --> E[Snowflake INTERMEDIATE]
     E --> F[Snowflake MART_STAGING]
     F --> G[Snowflake MARTS]
     G --> H[Streamlit Dashboards]
+    I[Apache Airflow] -. orchestrates .-> A
+    I -. orchestrates .-> B
+    I -. orchestrates .-> C
+    I -. orchestrates .-> D
 ```
 
 ## Technology Stack
 
 - Orchestration: Apache Airflow (Dockerized, LocalExecutor)
 - Data Warehouse: Snowflake (RSA private‑key authentication)
+- Raw Archive: Amazon S3 (gzip NDJSON, partitioned by API date and run ID)
 - Transformation: dbt Core + `dbt-snowflake`
 - Data Source: Polygon.io grouped daily aggregates API
 - Language & Libraries: Python, pandas, pandas‑market‑calendars, pendulum
@@ -34,6 +39,7 @@ graph LR
 ## Key Capabilities
 
 - Automated daily ingestion of Polygon grouped daily aggregates into Snowflake.
+- Immutable S3 raw landing for replay before warehouse loading.
 - Trading‑calendar aware scheduling using NYSE market hours (no weekends/holidays).
 - Incremental dbt models for technical indicators, with market and sector breadth facts.
 - Ingestion checkpoints in Snowflake (`ADMIN.INGESTION_CHECKPOINTS`) for restartability.
@@ -46,7 +52,7 @@ graph LR
 stock_market_data_pipeline/
 ├── airflow/
 │   ├── dags/
-│   │   └── daily_stock_pipeline_dag.py   # Airflow DAG: Polygon → Snowflake → dbt
+│   │   └── daily_stock_pipeline_dag.py   # Airflow DAG: Polygon → S3 → Snowflake → dbt
 │   ├── config/                           # Airflow configuration
 │   ├── logs/                             # Airflow logs (mounted volume)
 │   └── plugins/                          # Placeholder for custom operators/plugins
@@ -65,8 +71,9 @@ stock_market_data_pipeline/
 ├── src/
 │   ├── config.py                         # Config loader (Airflow Variables / .env)
 │   ├── extraction.py                     # Polygon API interface (grouped daily)
-│   ├── load.py                           # Raw-load Polygon rows into Snowflake
+│   ├── load.py                           # Archive raw rows in S3, then load Snowflake
 │   ├── extract_load_stocks.py            # Main ETL orchestration logic
+│   ├── s3_client.py                      # Gzip NDJSON raw archive client
 │   └── snowflake_client.py               # Snowflake connection + tables + checkpoints
 ├── data-viz/
 │   ├── streamlit_app.py                  # Streamlit entrypoint
@@ -77,13 +84,15 @@ stock_market_data_pipeline/
 │   └── utilities/
 │       └── snowflake_helper.py           # Helper for querying Snowflake from Streamlit
 ├── docker-compose.yaml                   # Airflow + Postgres + custom image
+├── infra/                                # AWS IAM and Snowflake S3 integration definitions
+├── scripts/backfill_raw_to_s3.py         # Restartable historical raw archive backfill
 ├── requirements.txt                      # Python dependencies for Airflow image
 └── .env.example                          # Example environment configuration
 ```
 
 ## Data Flow
 
-### 1. Ingestion: Polygon → Snowflake
+### 1. Ingestion: Polygon → S3 → Snowflake
 
 - `src/extraction.py` fetches grouped daily aggregate data from Polygon:
   - Endpoint: `GET {API_BASE_URL}/v2/aggs/grouped/locale/us/market/stocks/{date}`
@@ -92,12 +101,15 @@ stock_market_data_pipeline/
 - `src/load.py` lands the response as raw Polygon row payloads:
   - Stores each source row in `RAW_PAYLOAD`.
   - Adds operational metadata: `API_DATE`, `RUN_ID`, `SOURCE`, and `INGESTED_AT`.
+  - Archives gzip NDJSON under `api_date=<date>/run_id=<run-id>/` in S3.
+  - Loads that exact object into Snowflake only after the archive write succeeds.
   - Leaves business typing and normalization to dbt staging models.
 - `src/snowflake_client.py`:
   - Establishes a Snowflake connection using RSA private‑key auth.
   - Ensures the `RAW.DAILY_STOCKS_RAW` table and `ADMIN.INGESTION_CHECKPOINTS` table exist.
-  - Writes pandas DataFrames into Snowflake using `write_pandas`.
-  - Records ingestion checkpoints for each trading date (status, row count, timestamps).
+  - Uses a Snowflake external stage and `COPY INTO` to load the archived S3 object.
+  - Atomically replaces one API-date partition so retries cannot duplicate rows.
+  - Records status, row counts, and S3 object metadata in ingestion checkpoints.
 
 ### 2. Orchestration: Airflow DAG
 
@@ -259,6 +271,7 @@ graph TD
 ### Prerequisites
 
 - Docker & Docker Compose
+- AWS account with permission to provision a scoped S3 writer and Snowflake reader role
 - Snowflake account with:
   - Database (e.g., `MARKET`)
   - Warehouse (e.g., `COMPUTE_WH`)
@@ -294,11 +307,24 @@ Required values:
   - `SNOWFLAKE_DATABASE`
   - `SNOWFLAKE_SCHEMA`
   - `PRIVATE_KEY_PATH` (path to PEM private key in the Airflow container)
+- AWS:
+  - `AWS_REGION`
+  - `AWS_S3_BUCKET`
+  - `AWS_S3_PREFIX`
+  - AWS credentials for the dedicated ingestion identity
 - Optional:
   - `PYTHONPATH=src`
   - `DBT_PROFILES_DIR=dbt/stock_analytics`
 
-### 3. Configure Snowflake RSA key authentication
+### 3. Provision the S3 landing integration
+
+1. Run `infra/snowflake/s3_raw_landing.sql`, then use `DESC INTEGRATION STOCK_MARKET_S3_INTEGRATION` to obtain Snowflake's IAM principal and external ID.
+2. Deploy `infra/aws/stock-market-s3-iam.yaml` with an AWS administrator, passing those two trust values. It creates a dedicated ingestion user and the read-only role Snowflake assumes.
+3. Store the ingestion user's AWS credentials outside Git and set the non-secret bucket, prefix, and stage values from `.env.example`.
+
+The S3 bucket and Snowflake `RAW.DAILY_STOCKS_RAW` serve different purposes: S3 is the replayable source archive; the Snowflake table remains the queryable raw warehouse layer.
+
+### 4. Configure Snowflake RSA key authentication
 
 1. Generate an RSA private key and corresponding public key.
 2. Upload the public key to your Snowflake user (per Snowflake docs).
@@ -306,7 +332,7 @@ Required values:
 
 `src/snowflake_client.py` and `dbt/stock_analytics/profiles.yml` both rely on this key for authentication.
 
-### 4. Start Airflow + Postgres
+### 5. Start Airflow + Postgres
 
 ```bash
 docker compose up -d
@@ -324,7 +350,7 @@ Access the Airflow UI at:
 
 Once Airflow is initialized, you should see the `market_data_pipeline` DAG.
 
-### 5. Initialize dbt
+### 6. Initialize dbt
 
 Inside the Airflow web container or your local environment:
 
@@ -336,30 +362,27 @@ dbt seed --profiles-dir .
 
 This loads the Russell 3000 constituent snapshots into Snowflake (`SEEDS` schema).
 
-### 6. Run a historical backfill (optional)
+### 7. Backfill the S3 raw archive (optional)
 
-For an initial load spanning multiple years:
+The retained Snowflake raw table can reconstruct the historical archive without
+calling Polygon again. Preview the scope first, then run the restartable backfill:
 
-- Option A: Local Python (if you have the same env vars available):
+```bash
+python scripts/backfill_raw_to_s3.py --dry-run
+python scripts/backfill_raw_to_s3.py
+```
 
-  ```bash
-  python -m src.extract_load_stocks  # default extracts ~2 years (configurable in script)
-  ```
+This reconstruction preserves the retained raw rows and operational metadata; it
+does not recreate Polygon's original HTTP response envelope.
 
-- Option B: Trigger via Airflow:
-  - In the Airflow UI, trigger the `market_data_pipeline` DAG.
-  - Temporarily configure `extract_load_data` to use a larger lookback (e.g., `years_back=2`).
-
-The ingestion checkpoints in `ADMIN.INGESTION_CHECKPOINTS` ensure that re‑runs skip already completed dates.
-
-### 7. Enable daily pipeline
+### 8. Enable daily pipeline
 
 In the Airflow UI:
 
 - Unpause `market_data_pipeline`.
 - It will run Monday–Friday at 12:00 ET and ingest the previous trading day’s data, run dbt models, and execute tests.
 
-### 8. Run the Streamlit app
+### 9. Run the Streamlit app
 
 The dashboard is a historical portfolio snapshot backed by the retained
 Snowflake marts. Scheduled Polygon ingestion is currently paused, so the
@@ -419,8 +442,9 @@ Custom tests include:
 ### Ingestion Checks
 
 - `ADMIN.INGESTION_CHECKPOINTS` tracks each trading day’s status:
-  - `started`, `completed`, or `failed`
+  - `started`, `archived`, `completed`, or `failed`
   - Total tickers and rows inserted
+  - S3 bucket, key, ETag, and SHA-256 checksum
   - Error messages (if any)
 - `src.extract_load_stocks.get_completed_dates()` uses this table to avoid duplicate loads.
 

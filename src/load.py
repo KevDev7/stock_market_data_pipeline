@@ -4,12 +4,13 @@
 import json
 import pandas as pd
 from pendulum import parse
+from src.s3_client import S3RawClient
 from src.snowflake_client import SnowflakeClient
 
 SOURCE_NAME = "polygon_grouped_daily"
 
 
-def load_data(df, date_str, run_id, snowflake_client=None):
+def load_data(df, date_str, run_id, snowflake_client=None, s3_client=None):
     """
     Load extracted Polygon data into Snowflake and record checkpoints.
 
@@ -21,18 +22,12 @@ def load_data(df, date_str, run_id, snowflake_client=None):
     """
     owns_client = snowflake_client is None
     client = snowflake_client or SnowflakeClient()
+    archive = s3_client or S3RawClient()
+    archive_result = None
 
     try:
         if df is None or df.empty:
             error_message = f"No data returned for {date_str}"
-            client.record_checkpoint(
-                run_id=run_id,
-                api_date=parse(date_str),
-                status="failed",
-                total_tickers=0,
-                rows_inserted=0,
-                error_message=error_message
-            )
             raise ValueError(error_message)
 
         total_tickers = len(df["T"].unique()) if "T" in df.columns else 0
@@ -47,12 +42,24 @@ def load_data(df, date_str, run_id, snowflake_client=None):
 
         landing_df = _build_raw_landing_dataframe(df, date_str, run_id)
 
-        # Write to Snowflake
-        success, rows_inserted = client.replace_dataframe_for_date(
-            landing_df,
-            "DAILY_STOCKS_RAW",
+        archive_result = archive.archive_dataframe(landing_df, date_str, run_id)
+        client.record_checkpoint(
+            run_id=run_id,
+            api_date=parse(date_str),
+            status="archived",
+            total_tickers=total_tickers,
+            rows_inserted=0,
+            s3_bucket=archive_result["bucket"],
+            s3_key=archive_result["key"],
+            s3_etag=archive_result["etag"],
+            s3_sha256=archive_result["sha256"],
+        )
+
+        # Snowflake loads the durable S3 object through its external stage.
+        success, rows_inserted = client.replace_s3_object_for_date(
+            archive_result["key"],
             date_str,
-            date_column="API_DATE"
+            expected_rows=archive_result["row_count"],
         )
 
         # Record checkpoint status
@@ -62,20 +69,30 @@ def load_data(df, date_str, run_id, snowflake_client=None):
                 api_date=parse(date_str),
                 status="completed",
                 total_tickers=total_tickers,
-                rows_inserted=rows_inserted
+                rows_inserted=rows_inserted,
+                s3_bucket=archive_result["bucket"],
+                s3_key=archive_result["key"],
+                s3_etag=archive_result["etag"],
+                s3_sha256=archive_result["sha256"],
             )
             print(f"Successfully saved {rows_inserted} records for {date_str}")
         else:
             error_message = "Failed to insert data into Snowflake"
-            client.record_checkpoint(
-                run_id=run_id,
-                api_date=parse(date_str),
-                status="failed",
-                total_tickers=total_tickers,
-                rows_inserted=0,
-                error_message=error_message
-            )
             raise RuntimeError(error_message)
+    except Exception as exc:
+        client.record_checkpoint(
+            run_id=run_id,
+            api_date=parse(date_str),
+            status="failed",
+            total_tickers=locals().get("total_tickers", 0),
+            rows_inserted=0,
+            error_message=str(exc),
+            s3_bucket=archive_result["bucket"] if archive_result else None,
+            s3_key=archive_result["key"] if archive_result else None,
+            s3_etag=archive_result["etag"] if archive_result else None,
+            s3_sha256=archive_result["sha256"] if archive_result else None,
+        )
+        raise
     finally:
         if owns_client:
             client.close()

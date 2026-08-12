@@ -1,6 +1,7 @@
 # ./requirements.txt
 pandas
 pandas-market-calendars
+boto3
 requests
 pyarrow
 snowflake-connector-python[pandas]>=3.10,<5
