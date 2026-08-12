@@ -44,11 +44,13 @@ def qualified_table(table_name: str) -> str:
     if not table_name.replace("_", "").isalnum():
         raise ValueError(f"Invalid table name: {table_name}")
 
-    database = st.secrets["snowflake"]["database"]
-    schema = st.secrets["snowflake"]["schema"]
+    snowflake_secrets = st.secrets["snowflake"]
+    database = snowflake_secrets["database"]
+    schema = snowflake_secrets.get("mart_schema", "MARTS")
     return f"{database}.{schema}.{table_name}"
 
 
+@st.cache_data(ttl=86400, show_spinner=False)
 def query_snowflake(sql: str) -> pd.DataFrame:
     """Run SQL query against Snowflake and return pandas DataFrame."""
     conn = get_snowflake_connection()

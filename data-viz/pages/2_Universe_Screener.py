@@ -1,3 +1,4 @@
+import plotly.express as px
 import streamlit as st
 
 from utilities.dashboard_helpers import (
@@ -134,6 +135,70 @@ summary_col3.metric(
 )
 
 st.markdown("---")
+st.markdown("**Visual Summary**")
+
+chart_col1, chart_col2 = st.columns(2)
+
+with chart_col1:
+    sector_summary = (
+        df.groupby("sector", dropna=False)
+        .agg(
+            ticker_count=("ticker", "count"),
+            median_return_1m=("return_1m", "median"),
+        )
+        .reset_index()
+        .sort_values("median_return_1m", ascending=False)
+    )
+    sector_summary["median_return_1m_pct"] = sector_summary["median_return_1m"] * 100
+    fig = px.bar(
+        sector_summary,
+        x="median_return_1m_pct",
+        y="sector",
+        orientation="h",
+        color="ticker_count",
+        color_continuous_scale="Blues",
+        title="Median 1M Return by Sector",
+        labels={
+            "median_return_1m_pct": "Median 1M Return %",
+            "sector": "",
+            "ticker_count": "Rows",
+        },
+    )
+    fig.update_layout(
+        height=360,
+        yaxis={"categoryorder": "total ascending"},
+        margin=dict(l=10, r=10, t=50, b=10),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+with chart_col2:
+    plot_df = df.dropna(subset=["return_1m", "latest_rsi"]).copy()
+    plot_df["return_1m_pct"] = plot_df["return_1m"] * 100
+    fig = px.scatter(
+        plot_df,
+        x="return_1m_pct",
+        y="latest_rsi",
+        color="sector",
+        hover_name="ticker",
+        hover_data=["company", "latest_close"],
+        title="1M Return vs RSI",
+        labels={
+            "return_1m_pct": "1M Return %",
+            "latest_rsi": "Latest RSI",
+            "sector": "Sector",
+        },
+    )
+    fig.add_hline(y=70, line_dash="dot", line_color="#D92D20")
+    fig.add_hline(y=30, line_dash="dot", line_color="#039855")
+    fig.add_vline(x=0, line_dash="dot", line_color="#667085")
+    fig.update_layout(
+        height=360,
+        legend_title=None,
+        margin=dict(l=10, r=10, t=50, b=10),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("---")
 st.markdown("**Latest Snapshot**")
 
 display_columns = [
@@ -183,7 +248,7 @@ format_map = {
 
 st.dataframe(
     df[display_columns].style.format(format_map),
-    use_container_width=True,
+    width="stretch",
 )
 
 render_data_freshness()

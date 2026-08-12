@@ -361,6 +361,11 @@ In the Airflow UI:
 
 ### 8. Run the Streamlit app
 
+The dashboard is a historical portfolio snapshot backed by the retained
+Snowflake marts. Scheduled Polygon ingestion is currently paused, so the
+displayed data-through date advances only when ingestion is intentionally
+resumed.
+
 From `data-viz/` (local environment):
 
 1. Create `.streamlit/secrets.toml` with your Snowflake connection info, for example:
@@ -368,11 +373,12 @@ From `data-viz/` (local environment):
    ```toml
    [snowflake]
    account = "your_account"
-   user = "your_user"
-   role = "SYSADMIN"
-   warehouse = "COMPUTE_WH"
+   user = "STREAMLIT_DASHBOARD_USER"
+   role = "STREAMLIT_DASHBOARD_ROLE"
+   warehouse = "STREAMLIT_DASHBOARD_WH"
    database = "MARKET"
    schema = "MARTS"
+   mart_schema = "MARTS"
    private_key = """-----BEGIN PRIVATE KEY-----
    ... your PEM key here ...
    -----END PRIVATE KEY-----"""
