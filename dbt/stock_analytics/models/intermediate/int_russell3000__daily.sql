@@ -116,11 +116,13 @@ final AS (
         j.index_weight,
 
         -- Counts how many times this ticker has appeared, carrying state across incremental runs
-        j.slice_position
-        {% if is_incremental() %}
-        + COALESCE(p.prev_consecutive_trading_days, 0)
-        {% endif %}
-        AS consecutive_trading_days,
+        CAST(
+            j.slice_position
+            {% if is_incremental() %}
+            + COALESCE(p.prev_consecutive_trading_days, 0)
+            {% endif %}
+            AS NUMBER(38, 0)
+        ) AS consecutive_trading_days,
 
         {% if is_incremental() %}
         -- Get yesterday's close:

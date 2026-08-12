@@ -3,6 +3,8 @@
 from airflow.decorators import dag, task
 from pendulum import timezone, datetime
 
+DBT_EXECUTABLE = "/home/airflow/.dbt-venv/bin/dbt"
+
 # DAG for daily Polygon → Snowflake ingestion and dbt transformations.
 @dag(
     dag_id="market_data_pipeline",
@@ -29,32 +31,32 @@ def market_data_pipeline():
     # dbt is run layer-by-layer so failures surface at the correct stage
     @task.bash
     def run_dbt_staging():
-        return """cd /opt/airflow/dbt/stock_analytics && \
-            dbt run --select staging --profiles-dir .
+        return f"""cd /opt/airflow/dbt/stock_analytics && \
+            {DBT_EXECUTABLE} run --select staging --profiles-dir .
         """
 
     @task.bash
     def run_dbt_intermediate():
-        return """cd /opt/airflow/dbt/stock_analytics && \
-            dbt run --select intermediate --profiles-dir .
+        return f"""cd /opt/airflow/dbt/stock_analytics && \
+            {DBT_EXECUTABLE} run --select intermediate --profiles-dir .
         """
 
     @task.bash
     def run_dbt_marts():
-        return """cd /opt/airflow/dbt/stock_analytics && \
-            dbt run --select marts --profiles-dir .
+        return f"""cd /opt/airflow/dbt/stock_analytics && \
+            {DBT_EXECUTABLE} run --select marts --profiles-dir .
         """
 
     @task.bash
     def run_dbt_mart_staging():
-        return """cd /opt/airflow/dbt/stock_analytics && \
-            dbt run --select mart_staging --profiles-dir .
+        return f"""cd /opt/airflow/dbt/stock_analytics && \
+            {DBT_EXECUTABLE} run --select mart_staging --profiles-dir .
         """
 
     @task.bash
     def run_dbt_tests():
-        return """cd /opt/airflow/dbt/stock_analytics && \
-            dbt test --profiles-dir .
+        return f"""cd /opt/airflow/dbt/stock_analytics && \
+            {DBT_EXECUTABLE} test --profiles-dir .
         """
     
     # Enforce the ELT order: extract → dbt layers → dbt tests
