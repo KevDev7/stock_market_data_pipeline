@@ -5,21 +5,22 @@ from pendulum import timezone, datetime
 
 DBT_EXECUTABLE = "/home/airflow/.dbt-venv/bin/dbt"
 
-# DAG for daily Polygon → Snowflake ingestion and dbt transformations.
+# DAG for daily Polygon → S3 → Snowflake ingestion and dbt transformations.
 @dag(
     dag_id="market_data_pipeline",
     schedule="0 12 * * 1-5", # Mon–Fri at noon ET
     start_date=datetime(2025, 8, 1, tz=timezone("America/New_York")),
     catchup=False,
-    tags=["etl", "snowflake", "polygon", "dbt"],
+    tags=["etl", "s3", "snowflake", "polygon", "dbt"],
 )
 def market_data_pipeline():
     """
-    Daily ETL/ELT pipeline for Polygon → Snowflake → dbt.
+    Daily ETL/ELT pipeline for Polygon → S3 → Snowflake → dbt.
     Steps:
-      1) Extract + land grouped daily aggregates into RAW.DAILY_STOCKS_RAW
-      2) Run dbt models (staging → intermediate → mart_staging → marts)
-      3) Run dbt tests
+      1) Extract + archive grouped daily aggregates in Amazon S3
+      2) Load the archived object into RAW.DAILY_STOCKS_RAW
+      3) Run dbt models (staging → intermediate → mart_staging → marts)
+      4) Run dbt tests
     """
     @task()
     def extract():
