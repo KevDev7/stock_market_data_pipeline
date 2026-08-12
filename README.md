@@ -366,6 +366,8 @@ Snowflake marts. Scheduled Polygon ingestion is currently paused, so the
 displayed data-through date advances only when ingestion is intentionally
 resumed.
 
+**Live dashboard:** [Russell 3000 Market Intelligence](https://russell3000-market-intelligence.streamlit.app/)
+
 From `data-viz/` (local environment):
 
 1. Create `.streamlit/secrets.toml` with your Snowflake connection info, for example:
