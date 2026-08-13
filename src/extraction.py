@@ -1,5 +1,5 @@
 # src/extraction.py
-# Fetches grouped daily aggregate data from the Polygon API with retry handling.
+# Fetches grouped daily aggregates from Polygon.io (now Massive.com).
 
 import requests
 import pandas as pd
@@ -10,7 +10,7 @@ from src.config import POLYGON_API_KEY, API_BASE_URL
 
 def fetch_grouped_daily(date_str: str) -> pd.DataFrame:
     """
-    Fetch grouped daily aggregate data from the Polygon API for a given date.
+    Fetch grouped daily data from Polygon.io (now Massive.com) for a given date.
 
     Args:
         date_str (str): Date in 'YYYY-MM-DD' format.

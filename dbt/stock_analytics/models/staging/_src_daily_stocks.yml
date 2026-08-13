@@ -1,13 +1,13 @@
 # dbt/stock_analytics/models/staging/_src_daily_stocks.yml
-# Source definitions for raw Polygon daily stock data.
+# Source definitions for raw Polygon.io/Massive.com daily stock data.
 
 version: 2
 
 sources:
   - name: raw_market
-    description: "Raw layer in Snowflake containing Polygon daily stock data"
+    description: "Raw layer containing Polygon.io (now Massive.com) daily stock data"
     database: "{{ env_var('SNOWFLAKE_DATABASE', 'MARKET') }}"
     schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'RAW') }}"
     tables:
       - name: DAILY_STOCKS_RAW
-        description: "Raw Polygon grouped daily rows with ingestion metadata"
+        description: "Raw Polygon.io/Massive.com grouped daily rows with ingestion metadata"

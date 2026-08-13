@@ -59,7 +59,7 @@ class SnowflakeClient:
         self.cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SNOWFLAKE['schema']};")
         self.cursor.execute("CREATE SCHEMA IF NOT EXISTS ADMIN;")  # keep for checkpoints
 
-        # Raw Polygon row landing table. dbt owns market-data parsing and typing.
+        # Raw Polygon.io/Massive.com landing table. dbt owns parsing and typing.
         self.cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {SNOWFLAKE['schema']}.DAILY_STOCKS_RAW (
                 API_DATE DATE,

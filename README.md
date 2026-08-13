@@ -1,6 +1,6 @@
 # Stock Market Data Analytics Pipeline
 
-A batch ELT pipeline that ingests, transforms, and analyzes daily U.S. equity market data for the Russell 3000 universe using Polygon.io, Amazon S3, Apache Airflow, Snowflake, dbt, and Streamlit.
+A batch ELT pipeline that ingests, transforms, and analyzes daily U.S. equity market data for the Russell 3000 universe using Polygon.io (now Massive.com), Amazon S3, Apache Airflow, Snowflake, dbt, and Streamlit.
 
 The goal of this project is to build an end‑to‑end, production‑style analytics stack for equity market research: from raw OHLCV data to technical indicators, market breadth metrics, and interactive dashboards.
 
@@ -10,20 +10,14 @@ The goal of this project is to build an end‑to‑end, production‑style analy
 
 ## Architecture Overview
 
-```mermaid
-graph LR
-    A[Polygon API] -->|Daily Extract| B[Amazon S3 Raw Landing]
-    B -->|COPY INTO| C[Snowflake RAW]
-    C -->|dbt| D[Snowflake STAGING]
-    D --> E[Snowflake INTERMEDIATE]
-    E --> F[Snowflake MART_STAGING]
-    F --> G[Snowflake MARTS]
-    G --> H[Streamlit Dashboards]
-    I[Apache Airflow] -. orchestrates .-> A
-    I -. orchestrates .-> B
-    I -. orchestrates .-> C
-    I -. orchestrates .-> D
-```
+<p align="center">
+  <img src="assets/StockMarketELT-Arch.png" width="100%" alt="Stock market ELT architecture from the provider API through S3, Snowflake, dbt, and Streamlit">
+</p>
+
+The diagram groups `STAGING`, `INTERMEDIATE`, and `MART_STAGING` into one
+transformation station for readability. They remain separate schemas in the
+`MARKET` Snowflake database. Airflow orchestrates the workflow, Docker Compose
+provides the local runtime, and AWS IAM controls access to the S3 raw archive.
 
 ## Technology Stack
 
@@ -31,14 +25,20 @@ graph LR
 - Data Warehouse: Snowflake (RSA private‑key authentication)
 - Raw Archive: Amazon S3 (gzip NDJSON, partitioned by API date and run ID)
 - Transformation: dbt Core + `dbt-snowflake`
-- Data Source: Polygon.io grouped daily aggregates API
+- Data Source: Polygon.io grouped daily aggregates API (provider now named Massive.com)
 - Language & Libraries: Python, pandas, pandas‑market‑calendars, pendulum
 - Visualization: Streamlit app querying Snowflake
 - Containerization: Docker & Docker Compose
 
+> **Vendor naming:** The source provider rebranded from Polygon.io to
+> [Massive.com](https://massive.com/blog/polygon-is-now-massive) on October 30,
+> 2025. This project retains Polygon naming in historical metadata, environment
+> variables, S3 paths, and the supported `api.polygon.io` endpoint because that
+> was the provider name when the retained data was ingested.
+
 ## Key Capabilities
 
-- Scheduled weekday ingestion design for Polygon grouped daily aggregates; ingestion is currently paused.
+- Scheduled weekday ingestion design for Polygon.io/Massive.com grouped daily aggregates; ingestion is currently paused.
 - Versioned, replayable S3 raw landing before warehouse loading.
 - NYSE trading-calendar-aware date selection that excludes weekends and exchange holidays.
 - Incremental dbt models for technical indicators, with market and sector breadth facts.
@@ -52,7 +52,7 @@ graph LR
 stock_market_data_pipeline/
 ├── airflow/
 │   ├── dags/
-│   │   └── daily_stock_pipeline_dag.py   # Airflow DAG: Polygon → S3 → Snowflake → dbt
+│   │   └── daily_stock_pipeline_dag.py   # Airflow DAG: API → S3 → Snowflake → dbt
 │   ├── config/                           # Airflow configuration
 │   ├── logs/                             # Airflow logs (mounted volume)
 │   └── plugins/                          # Placeholder for custom operators/plugins
@@ -70,7 +70,7 @@ stock_market_data_pipeline/
 │       └── tests/                        # Data quality tests
 ├── src/
 │   ├── config.py                         # Config loader (Airflow Variables / .env)
-│   ├── extraction.py                     # Polygon API interface (grouped daily)
+│   ├── extraction.py                     # Market-data API interface (grouped daily)
 │   ├── load.py                           # Archive raw rows in S3, then load Snowflake
 │   ├── extract_load_stocks.py            # Main ingestion orchestration logic
 │   ├── s3_client.py                      # Gzip NDJSON raw archive client
@@ -93,13 +93,13 @@ stock_market_data_pipeline/
 
 ## Data Flow
 
-### 1. Ingestion: Polygon → S3 → Snowflake
+### 1. Ingestion: Polygon.io/Massive.com → S3 → Snowflake
 
-- `src/extraction.py` fetches grouped daily aggregate data from Polygon:
+- `src/extraction.py` fetches grouped daily aggregate data from Polygon.io/Massive.com:
   - Endpoint: `GET {API_BASE_URL}/v2/aggs/grouped/locale/us/market/stocks/{date}`
   - Parameters: `adjusted=true`, `apiKey=${POLYGON_API_KEY}`
   - Includes basic retry handling for rate limits and transient errors.
-- `src/load.py` lands the response as raw Polygon row payloads:
+- `src/load.py` lands the response as raw provider row payloads:
   - Stores each source row in `RAW_PAYLOAD`.
   - Adds operational metadata: `API_DATE`, `RUN_ID`, `SOURCE`, and `INGESTED_AT`.
   - Archives gzip NDJSON under `api_date=<date>/run_id=<run-id>/` in S3.
@@ -122,7 +122,7 @@ stock_market_data_pipeline/
      `extract()` task calls `src.extract_load_stocks.extract_load_data(days_back_override=1)` to:
         - Determine valid NYSE trading days using `pandas-market-calendars`, with daily runs targeting the last completed trading day.
      - Skip dates already marked as `completed` in `ADMIN.INGESTION_CHECKPOINTS`.
-     - Fetch Polygon data, archive it in S3, then load that object into `RAW.DAILY_STOCKS_RAW`.
+     - Fetch market data, archive it in S3, then load that object into `RAW.DAILY_STOCKS_RAW`.
   2. **Transform**  
      Shell tasks run dbt models layer‑by‑layer:
      - `dbt run --select staging`
@@ -168,27 +168,13 @@ The dbt project (`dbt/stock_analytics`) uses Snowflake as its target:
 
 #### Analytics Marts
 
-```mermaid
-graph TD
-    MS1[MART_STAGING.PREP_SECURITY_DAILY_MOMENTUM] --> F1[MARTS.FCT_SECURITY_DAILY_MOMENTUM]
-    MS2[MART_STAGING.PREP_MARKET_DAILY_BREADTH] --> F2[MARTS.FCT_MARKET_DAILY_BREADTH]
-    MS3[MART_STAGING.PREP_SECTOR_DAILY_BREADTH] --> F3[MARTS.FCT_SECTOR_DAILY_BREADTH]
-    MS4[MART_STAGING.PREP_SECURITY_CURRENT_SNAPSHOT] --> F4[MARTS.FCT_SECURITY_CURRENT_SNAPSHOT]
+<p align="center">
+  <img src="assets/StockMarketELT_Model.png" width="100%" alt="Snowflake marts dimensional model with shared date, security, sector, and security history dimensions">
+</p>
 
-    D1[MARTS.DIM_DATE] --> F1
-    D1 --> F2
-    D1 --> F3
-    D1 --> F4
-
-    D2[MARTS.DIM_SECURITY] --> F1
-    D2 --> F4
-    D2H[MARTS.DIM_SECURITY_HISTORY]
-
-    D3[MARTS.DIM_SECTOR] --> F1
-    D3 --> F3
-    D3 --> F4
-    D3 --> D2H
-```
+The primary security-day star shares conformed dimensions with market-day,
+sector-day, and current-snapshot facts, forming a small fact constellation.
+`DIM_SECURITY_HISTORY` implements SCD Type 2 history.
 
 - The marts layer is modeled as a small dimensional fact constellation:
   - `dim_date`: conformed trading-date dimension.
@@ -259,7 +245,7 @@ graph TD
   - Database (e.g., `MARKET`)
   - Warehouse (e.g., `COMPUTE_WH`)
   - Role with privileges to create schemas/tables
-- Polygon.io API key (required only to resume ingestion)
+- Massive.com/Polygon.io API key (required only to resume ingestion)
 - Python 3 (for local runs) – optional but useful
 
 ### 1. Clone the repository
@@ -279,9 +265,9 @@ cp .env.example .env
 
 Required values:
 
-- Polygon:
+- Massive.com (formerly Polygon.io; historical variable names retained):
   - `POLYGON_API_KEY`
-  - `API_BASE_URL` (e.g., `https://api.polygon.io`)
+  - `API_BASE_URL` (the project retains the supported `https://api.polygon.io` endpoint)
 - Snowflake:
   - `SNOWFLAKE_ACCOUNT`
   - `SNOWFLAKE_USER`
@@ -354,7 +340,7 @@ This loads the Russell 3000 constituent snapshots into Snowflake (`SEEDS` schema
 ### 7. Backfill the S3 raw archive (optional)
 
 The retained Snowflake raw table can reconstruct the historical archive without
-calling Polygon again. Preview the scope first, then run the restartable backfill:
+calling the provider API again. Preview the scope first, then run the restartable backfill:
 
 ```bash
 docker compose run --rm --entrypoint python airflow-scheduler \
@@ -364,7 +350,7 @@ docker compose run --rm --entrypoint python airflow-scheduler \
 ```
 
 This reconstruction preserves the retained raw rows and operational metadata; it
-does not recreate Polygon's original HTTP response envelope.
+does not recreate the provider's original HTTP response envelope.
 
 ### 8. Enable daily pipeline
 
@@ -376,7 +362,7 @@ In the Airflow UI:
 ### 9. Run the Streamlit app
 
 The dashboard is a historical portfolio snapshot backed by the retained
-Snowflake marts. Scheduled Polygon ingestion is currently paused, so the
+Snowflake marts. Scheduled provider ingestion is currently paused, so the
 displayed data-through date advances only when ingestion is intentionally
 resumed.
 
@@ -493,13 +479,13 @@ ORDER BY s.sector_name, f.return_1m DESC;
 ## Known Limitations / Future Work
 
 - **Corporate actions:**  
-  The pipeline requests Polygon aggregates with `adjusted=true`, but it does not automatically re-ingest history when adjusted values change retroactively. Indicators can therefore remain based on the retained historical snapshot until a backfill is run.
+  The pipeline requests Polygon.io/Massive.com aggregates with `adjusted=true`, but it does not automatically re-ingest history when adjusted values change retroactively. Indicators can therefore remain based on the retained historical snapshot until a backfill is run.
 
 - **Universe coverage:**  
   Focused on Russell 3000 constituents via seeded snapshots. Additional universes (e.g., sector ETFs, custom watchlists) would require new seeds and joins.
 
 - **Cost awareness:**  
-  Snowflake and Polygon usage can incur costs at scale. Query patterns and warehouse sizing should be tuned for your environment.
+  Snowflake and Massive.com/Polygon.io usage can incur costs at scale. Query patterns and warehouse sizing should be tuned for your environment.
 
 ## License
 
