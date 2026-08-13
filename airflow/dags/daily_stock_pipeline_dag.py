@@ -5,7 +5,7 @@ from pendulum import timezone, datetime
 
 DBT_EXECUTABLE = "/home/airflow/.dbt-venv/bin/dbt"
 
-# DAG for daily Polygon → S3 → Snowflake ingestion and dbt transformations.
+# DAG for daily Polygon.io/Massive.com → S3 → Snowflake → dbt.
 @dag(
     dag_id="market_data_pipeline",
     schedule="0 12 * * 1-5", # Mon–Fri at noon ET
@@ -15,7 +15,7 @@ DBT_EXECUTABLE = "/home/airflow/.dbt-venv/bin/dbt"
 )
 def market_data_pipeline():
     """
-    Daily batch ELT pipeline for Polygon → S3 → Snowflake → dbt.
+    Daily batch ELT pipeline for Polygon.io/Massive.com → S3 → Snowflake → dbt.
     Steps:
       1) Extract + archive grouped daily aggregates in Amazon S3
       2) Load the archived object into RAW.DAILY_STOCKS_RAW

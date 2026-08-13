@@ -21,7 +21,7 @@ def get_config_value(key, default=None):
 # Repository root
 PROJECT_ROOT = Path(__file__).parent.parent
 
-# Polygon API Configuration
+# Massive.com API configuration (historical Polygon variable names retained)
 POLYGON_API_KEY = get_config_value("POLYGON_API_KEY")
 API_BASE_URL = get_config_value("API_BASE_URL")
 

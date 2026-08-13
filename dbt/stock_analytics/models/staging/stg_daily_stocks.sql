@@ -1,4 +1,4 @@
--- Standardizes raw Polygon daily stock payloads into staging format.
+-- Standardizes raw Polygon.io/Massive.com daily payloads into staging format.
 WITH raw_rows AS (
     SELECT
         API_DATE AS trade_date,

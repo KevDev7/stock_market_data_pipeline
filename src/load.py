@@ -1,5 +1,5 @@
 # src/load.py
-# Archives grouped daily Polygon data in S3, then loads Snowflake RAW.
+# Archives Polygon.io (now Massive.com) grouped daily data, then loads Snowflake RAW.
 
 import json
 import pandas as pd
@@ -12,10 +12,10 @@ SOURCE_NAME = "polygon_grouped_daily"
 
 def load_data(df, date_str, run_id, snowflake_client=None, s3_client=None):
     """
-    Archive extracted Polygon data in S3, load it into Snowflake, and checkpoint it.
+    Archive extracted Polygon.io/Massive.com data, load it, and checkpoint it.
 
     Args:
-        df (pd.DataFrame): DataFrame returned by the Polygon API.
+        df (pd.DataFrame): DataFrame returned by the Polygon.io/Massive.com API.
         date_str (str): Trading date being processed (YYYY-MM-DD).
         run_id (str): Pipeline execution identifier.
         snowflake_client (SnowflakeClient | None): Optional existing client.

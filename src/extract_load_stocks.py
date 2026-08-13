@@ -1,5 +1,5 @@
 # src/extract_load_stocks.py
-# Pipeline entrypoint for Polygon extraction, S3 archival, and Snowflake loading.
+# Pipeline entrypoint for Polygon.io/Massive.com extraction and raw loading.
 
 import time
 import pendulum
@@ -28,7 +28,7 @@ def get_completed_dates():
 
 def extract_load_data(years_back=2, days_back_override=None):
     """
-    Fetch Polygon grouped daily data, archive it in S3, load that object into
+    Fetch Polygon.io/Massive.com grouped daily data, archive it in S3, load it into
     Snowflake RAW, and record ingestion checkpoints.
     """
     run_id = pendulum.now().strftime("%Y%m%d_%H%M%S")
