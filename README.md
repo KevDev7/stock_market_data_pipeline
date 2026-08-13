@@ -27,35 +27,36 @@ transformation station for readability. They remain separate schemas in the
 | Concern | Technology | Role |
 |---|---|---|
 | Source | Polygon.io / Massive.com | Grouped daily U.S. stock aggregates |
-| Raw archive | Amazon S3 | Versioned gzip NDJSON partitioned by API date and run ID |
+| Raw archive | Amazon S3 | Replayable source JSON |
 | Warehouse | Snowflake | Raw landing, transformation compute, and dimensional marts |
 | Transformation | dbt Core | SQL models, incremental loads, SCD Type 2, and tests |
-| Orchestration | Apache Airflow | Weekday ingestion, ordered dbt builds, and quality checks |
-| Local runtime | Docker Compose | Reproducible Airflow and PostgreSQL environment |
+| Orchestration | Apache Airflow | Scheduled ingestion, transformations, and quality checks |
+| Local runtime | Docker Compose | Reproducible Airflow environment |
 | Analytics | Streamlit | Hosted market, sector, security, and momentum dashboards |
 
-AWS IAM scopes the ingestion writer to the project S3 prefix and gives
-Snowflake read-only access through an assumed role. Snowflake and Streamlit use
-RSA key-pair authentication.
+Scoped AWS IAM permissions and key-pair authentication secure access between
+services.
 
 ## What It Demonstrates
 
-- **Replayable ingestion:** source rows are archived in S3 before Snowflake
-  loading, with checksums and object metadata retained for auditability.
-- **Idempotent daily loads:** one `API_DATE` partition is atomically replaced,
-  while `ADMIN.INGESTION_CHECKPOINTS` supports retries and restartability.
+- **Replayable ingestion:** source JSON is archived in S3 before Snowflake
+  loading, enabling recovery and reprocessing.
+- **Reliable loading:** idempotent daily loads and ingestion checkpoints support
+  safe retries without duplicate data.
 - **Layered ELT:** `RAW -> STAGING -> INTERMEDIATE -> MART_STAGING -> MARTS`,
   with business transformations executed by dbt inside Snowflake.
-- **Incremental processing:** security-day models use date lookbacks and dbt
-  `MERGE` logic to safely recalculate rolling indicators.
+- **Incremental processing:** dbt models efficiently process new and affected
+  trading dates while preserving rolling-indicator accuracy.
 - **Dimensional modeling:** conformed date, security, and sector dimensions are
   shared by a small fact constellation.
-- **Historical dimensions:** `DIM_SECURITY_HISTORY` implements SCD Type 2 using
-  validity windows, while `DIM_SECURITY` exposes current attributes.
-- **Data quality:** schema tests and custom SQL tests validate keys, ranges,
-  freshness, technical indicators, and breadth reconciliations.
+- **Historical dimensions:** SCD Type 2 preserves changes to Russell 3000
+  security attributes over time.
+- **Data quality:** dbt tests validate keys, relationships, business rules,
+  historical validity, and aggregate accuracy.
 - **Analytics delivery:** four Streamlit views expose market breadth, sector
   breadth, universe screening, and ticker momentum.
+- **Meaningful scale:** the retained dataset contains approximately 5.88 million
+  raw records across 539 trading dates.
 
 ## Dimensional Marts
 
@@ -63,25 +64,14 @@ RSA key-pair authentication.
   <img src="assets/StockMarketELT_Model.png" width="100%" alt="Snowflake marts dimensional model with shared date, security, sector, and security history dimensions">
 </p>
 
-The primary `FCT_SECURITY_DAILY_MOMENTUM` star shares conformed dimensions with
-market-day, sector-day, and current-snapshot facts, making the marts both a star
-schema and a small fact constellation.
-
-| Model | Grain |
-|---|---|
-| `FCT_SECURITY_DAILY_MOMENTUM` | Security x trading date |
-| `FCT_MARKET_DAILY_BREADTH` | Trading date |
-| `FCT_SECTOR_DAILY_BREADTH` | Sector x trading date |
-| `FCT_SECURITY_CURRENT_SNAPSHOT` | Security |
-| `DIM_DATE` | Trading date |
-| `DIM_SECURITY` | Ticker |
-| `DIM_SECURITY_HISTORY` | Ticker x validity period |
-| `DIM_SECTOR` | Sector |
+The primary security-day star shares conformed date, security, and sector
+dimensions with market-day, sector-day, and current-snapshot facts. Together
+they form a small fact constellation, with an additional SCD Type 2 security
+history dimension.
 
 ## Pipeline Run
 
-The Airflow DAG `market_data_pipeline` is designed for weekdays at noon Eastern
-(`0 12 * * 1-5`) and contains six ordered tasks:
+Airflow runs the pipeline on a weekday schedule and enforces this order:
 
 ```text
 Extract + S3 archive + Snowflake RAW load
@@ -92,20 +82,16 @@ Extract + S3 archive + Snowflake RAW load
   -> dbt tests
 ```
 
-NYSE calendar logic selects the latest completed trading day and avoids
-weekends and exchange holidays. Russell 3000 constituent CSV seeds supply
-point-in-time membership and descriptive attributes.
+NYSE calendar logic selects completed trading dates, while Russell 3000
+constituent seeds provide point-in-time membership and descriptive attributes.
 
 ## Reliability
 
-- S3 objects use deterministic gzip encoding, server-side encryption, and
-  SHA-256 verification.
-- Checkpoints record `started`, `archived`, `completed`, or `failed` status,
-  row counts, S3 location, ETag, checksum, and errors.
-- dbt tests cover uniqueness, referential integrity, RSI bounds, crossover
-  exclusivity, 52-week price consistency, freshness, and breadth totals.
-- Historical S3 reconstruction is restartable and can be previewed with a dry
-  run without calling the provider API.
+- S3 archival includes secure storage and integrity validation.
+- Ingestion checkpoints track progress and support recovery after failures.
+- dbt tests cover structural integrity, transformation logic, SCD Type 2
+  history, and aggregate reconciliation.
+- Historical raw data can be reconstructed without calling the provider API.
 
 ## Quick Start
 
