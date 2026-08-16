@@ -52,24 +52,7 @@ class LoadDataTest(unittest.TestCase):
 
     def test_completion_requires_archive_and_snowflake_load(self):
         warehouse = FakeSnowflake()
-        load_data(
-            self.source,
-            "2026-01-14",
-            "run-1",
-            snowflake_client=warehouse,
-            s3_client=FakeArchive(),
-        )
-
-        self.assertEqual(
-            [row["status"] for row in warehouse.checkpoints],
-            ["started", "archived", "completed"],
-        )
-        self.assertEqual(warehouse.load_call[1:], ("2026-01-14", 2))
-        self.assertTrue(warehouse.checkpoints[-1]["s3_key"].endswith(".ndjson.gz"))
-
-    def test_failed_snowflake_load_preserves_archive_location(self):
-        warehouse = FakeSnowflake(fail_load=True)
-        with self.assertRaisesRegex(RuntimeError, "warehouse unavailable"):
+        with self.assertLogs("src.load", level="INFO") as captured:
             load_data(
                 self.source,
                 "2026-01-14",
@@ -80,9 +63,34 @@ class LoadDataTest(unittest.TestCase):
 
         self.assertEqual(
             [row["status"] for row in warehouse.checkpoints],
+            ["started", "archived", "completed"],
+        )
+        self.assertEqual(warehouse.load_call[1:], ("2026-01-14", 2))
+        self.assertTrue(warehouse.checkpoints[-1]["s3_key"].endswith(".ndjson.gz"))
+        self.assertIn("run_id=run-1", captured.output[0])
+        self.assertIn("api_date=2026-01-14", captured.output[0])
+        self.assertIn("rows=2", captured.output[0])
+
+    def test_failed_snowflake_load_preserves_archive_location(self):
+        warehouse = FakeSnowflake(fail_load=True)
+        with self.assertLogs("src.load", level="ERROR") as captured:
+            with self.assertRaisesRegex(RuntimeError, "warehouse unavailable"):
+                load_data(
+                    self.source,
+                    "2026-01-14",
+                    "run-1",
+                    snowflake_client=warehouse,
+                    s3_client=FakeArchive(),
+                )
+
+        self.assertEqual(
+            [row["status"] for row in warehouse.checkpoints],
             ["started", "archived", "failed"],
         )
         self.assertIsNotNone(warehouse.checkpoints[-1]["s3_key"])
+        self.assertIn("Raw stock load failed", captured.output[0])
+        self.assertIn("run_id=run-1", captured.output[0])
+        self.assertIsNotNone(captured.records[0].exc_info)
 
     @patch("src.load.SnowflakeClient")
     def test_owned_snowflake_client_is_set_up_and_closed(self, client_class):
