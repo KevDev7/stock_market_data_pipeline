@@ -1,12 +1,17 @@
 # src/snowflake_client.py
 # Manages Snowflake connections, S3-backed raw loads, and ingestion checkpoints.
 
-import pendulum
-from snowflake.connector import connect
-from src.config import AWS, SNOWFLAKE
+import logging
 import os
 import re
 import uuid
+
+import pendulum
+from snowflake.connector import connect
+
+from src.config import AWS, SNOWFLAKE
+
+logger = logging.getLogger(__name__)
 
 
 class SnowflakeClient:
@@ -47,12 +52,16 @@ class SnowflakeClient:
         else:
             raise FileNotFoundError(f"Private key not found: {private_key_path}")
 
-        print("Connected to Snowflake successfully.")
+        logger.info(
+            "Connected to Snowflake database=%s schema=%s",
+            SNOWFLAKE["database"],
+            SNOWFLAKE["schema"],
+        )
         return conn
     
     def ensure_objects_exist(self):
         """Ensure database tables exist in configured schema and admin schema."""
-        print("Checking or creating necessary tables...")
+        logger.info("Checking required Snowflake objects")
 
         # Create the configured schema if it doesn’t exist
         self.cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SNOWFLAKE['schema']};")
@@ -94,7 +103,7 @@ class SnowflakeClient:
             )
 
         self.conn.commit()
-        print("Verified table existence.")
+        logger.info("Verified required Snowflake objects")
 
     def _validate_identifier(self, identifier: str):
         """Validate simple Snowflake identifiers used by internal SQL templates."""
@@ -205,7 +214,14 @@ class SnowflakeClient:
             s3_bucket, s3_key, s3_etag, s3_sha256
         ))
         self.conn.commit()
-        print(f"Checkpoint recorded for {api_date} — {status}")
+        logger.info(
+            "Recorded ingestion checkpoint run_id=%s api_date=%s status=%s "
+            "rows_inserted=%s",
+            run_id,
+            api_date,
+            status,
+            rows_inserted,
+        )
 
     def get_completed_dates(self):
         """Return all API_DATE values where status='completed'."""
@@ -217,10 +233,10 @@ class SnowflakeClient:
         try:
             self.cursor.execute(query)
             dates = {row[0].strftime("%Y-%m-%d") for row in self.cursor.fetchall()}
-            print(f"Found {len(dates)} completed dates.")
+            logger.info("Read completed ingestion dates count=%s", len(dates))
             return dates
-        except Exception as e:
-            print(f"Error reading checkpoint table: {e}")
+        except Exception:
+            logger.exception("Failed to read completed ingestion dates")
             return set()
 
     def close(self):
@@ -228,6 +244,6 @@ class SnowflakeClient:
         try:
             self.cursor.close()
             self.conn.close()
-            print("Connection closed.")
+            logger.info("Closed Snowflake connection")
         except Exception:
-            pass
+            logger.warning("Failed to close Snowflake connection", exc_info=True)

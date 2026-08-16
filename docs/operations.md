@@ -94,3 +94,19 @@ docker compose logs --tail=100 airflow-scheduler
 The raw S3 archive and `RAW.DAILY_STOCKS_RAW` serve different purposes: S3 is
 the durable replay source, while Snowflake RAW is the queryable warehouse
 landing layer used by dbt.
+
+## Logging
+
+The ingestion code uses Python's standard `logging` module with three levels:
+
+- `INFO` for run progress, dates, checkpoints, row counts, and successful loads
+- `WARNING` for rate limits, retries, empty responses, and recoverable issues
+- `ERROR` for terminal API failures and failed raw loads
+
+Messages include identifiers such as `run_id` and `api_date` without logging API
+keys, private keys, or raw payloads. Airflow automatically captures these module
+logs for each task attempt and stores them under `airflow/logs/`, which is mounted
+from `/opt/airflow/logs` by Docker Compose. Remote Airflow logging is disabled.
+dbt writes its own detailed `logs/dbt.log` relative to the directory where dbt
+is invoked, while its console output also appears in the corresponding Airflow
+task log.

@@ -1,13 +1,18 @@
 # src/extract_load_stocks.py
 # Pipeline entrypoint for Polygon.io/Massive.com extraction and raw loading.
 
+import logging
 import time
+
 import pendulum
 import pandas_market_calendars as mcal
 from pendulum import duration
+
 from src.extraction import fetch_grouped_daily
 from src.load import archive_and_load_raw_data
 from src.snowflake_client import SnowflakeClient
+
+logger = logging.getLogger(__name__)
 
 
 def get_trading_days(start_date, end_date, calendar_name="NYSE"):
@@ -33,7 +38,7 @@ def ingest_raw_stock_data(years_back=2, days_back_override=None):
     Snowflake RAW, and record ingestion checkpoints.
     """
     run_id = pendulum.now().strftime("%Y%m%d_%H%M%S")
-    print(f"\nStarting historical stock data load | run_id = {run_id}")
+    logger.info("Starting raw stock ingestion run_id=%s", run_id)
 
     today = pendulum.now("America/New_York").date()
     end_date = today - duration(days=1)
@@ -58,18 +63,38 @@ def ingest_raw_stock_data(years_back=2, days_back_override=None):
         [d for d in trading_days if d.strftime("%Y-%m-%d") not in completed_dates]
     )
 
-    print(f"Total trading days: {total_days}")
-    print(f"Already completed: {len(completed_dates)}")
-    print(f"Remaining to process: {remaining_days}\n")
+    logger.info(
+        "Prepared ingestion run_id=%s start_date=%s end_date=%s "
+        "trading_days=%s known_completed_dates=%s remaining_days=%s",
+        run_id,
+        start_date,
+        end_date,
+        total_days,
+        len(completed_dates),
+        remaining_days,
+    )
 
     for i, date in enumerate(trading_days, 1):
         date_str = date.strftime("%Y-%m-%d")
 
         if date_str in completed_dates:
-            print(f"Skipping {date_str} (already completed). Progress: {i}/{total_days}")
+            logger.info(
+                "Skipping completed date run_id=%s api_date=%s progress=%s/%s",
+                run_id,
+                date_str,
+                i,
+                total_days,
+            )
             continue
 
-        print(f"Processing {date_str} | Progress {i}/{total_days} (Remaining: {remaining_days})")
+        logger.info(
+            "Processing date run_id=%s api_date=%s progress=%s/%s remaining_days=%s",
+            run_id,
+            date_str,
+            i,
+            total_days,
+            remaining_days,
+        )
 
         df = fetch_grouped_daily(date_str)
         archive_and_load_raw_data(df, date_str, run_id)
@@ -78,7 +103,7 @@ def ingest_raw_stock_data(years_back=2, days_back_override=None):
         time.sleep(20)
         remaining_days -= 1
 
-    print("\nFinished processing all trading days.")
+    logger.info("Finished raw stock ingestion run_id=%s", run_id)
 
 
 def extract_load_data(years_back=2, days_back_override=None):
@@ -90,6 +115,10 @@ def extract_load_data(years_back=2, days_back_override=None):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     # Override for short local runs during development
     # ingest_raw_stock_data(years_back=2)
     ingest_raw_stock_data(days_back_override=3)

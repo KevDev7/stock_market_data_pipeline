@@ -2,12 +2,16 @@
 # Archives Polygon.io (now Massive.com) grouped daily data, then loads Snowflake RAW.
 
 import json
+import logging
+
 import pandas as pd
 from pendulum import parse
+
 from src.s3_client import S3RawClient
 from src.snowflake_client import SnowflakeClient
 
 SOURCE_NAME = "polygon_grouped_daily"
+logger = logging.getLogger(__name__)
 
 
 def archive_and_load_raw_data(
@@ -80,11 +84,22 @@ def archive_and_load_raw_data(
                 s3_etag=archive_result["etag"],
                 s3_sha256=archive_result["sha256"],
             )
-            print(f"Successfully saved {rows_inserted} records for {date_str}")
+            logger.info(
+                "Loaded raw stock data run_id=%s api_date=%s rows=%s "
+                "table=DAILY_STOCKS_RAW",
+                run_id,
+                date_str,
+                rows_inserted,
+            )
         else:
             error_message = "Failed to insert data into Snowflake"
             raise RuntimeError(error_message)
     except Exception as exc:
+        logger.exception(
+            "Raw stock load failed run_id=%s api_date=%s",
+            run_id,
+            date_str,
+        )
         snowflake.record_checkpoint(
             run_id=run_id,
             api_date=parse(date_str),

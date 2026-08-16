@@ -1,11 +1,16 @@
 # src/extraction.py
 # Fetches grouped daily aggregates from Polygon.io (now Massive.com).
 
-import requests
-import pandas as pd
+import logging
 import time
+
+import pandas as pd
+import requests
 from requests import RequestException
+
 from src.config import POLYGON_API_KEY, API_BASE_URL
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_grouped_daily(date_str: str) -> pd.DataFrame:
@@ -28,29 +33,35 @@ def fetch_grouped_daily(date_str: str) -> pd.DataFrame:
         "apiKey": POLYGON_API_KEY
     }
 
-    data = _make_request_with_retry(url, params=params)
+    data = _make_request_with_retry(url, params=params, api_date=date_str)
 
-    if not data or "results" not in data:
-        print(f"No data returned for {date_str}")
+    if data is None:
+        return None
+
+    if "results" not in data:
+        logger.warning("API response missing results api_date=%s", date_str)
         return None
 
     df = pd.DataFrame(data["results"])
 
     if df.empty:
-        print(f"Empty results for {date_str}")
+        logger.warning("Empty API results api_date=%s", date_str)
         return None
 
-    print(f"Successfully fetched {len(df)} records for {date_str}")
+    logger.info("Fetched stock data api_date=%s rows=%s", date_str, len(df))
     return df
 
 
-def _make_request_with_retry(url: str, params: dict, max_retries: int = 3):
+def _make_request_with_retry(
+    url: str, params: dict, api_date: str, max_retries: int = 3
+):
     """
     Helper: retry HTTP requests for transient errors or rate limits.
 
     Args:
         url (str): API endpoint URL.
         params (dict): Query parameters.
+        api_date (str): Trading date used to identify request logs.
         max_retries (int): Maximum number of retry attempts.
 
     Returns:
@@ -64,18 +75,45 @@ def _make_request_with_retry(url: str, params: dict, max_retries: int = 3):
             if status == 200:
                 return response.json()
             elif status == 429:
-                print("Rate limited. Waiting 60 seconds before retry...")
+                logger.warning(
+                    "API rate limited api_date=%s attempt=%s/%s retry_in_seconds=60",
+                    api_date,
+                    attempt,
+                    max_retries,
+                )
                 time.sleep(60)
             elif 500 <= status < 600:
-                print(f"Server error {status}. Retrying in 5s (attempt {attempt}/{max_retries})...")
+                logger.warning(
+                    "API server error api_date=%s status=%s attempt=%s/%s "
+                    "retry_in_seconds=5",
+                    api_date,
+                    status,
+                    attempt,
+                    max_retries,
+                )
                 time.sleep(5)
             else:
-                print(f"Client error {status}: {response.text[:100]}")
-                break
+                logger.error(
+                    "API client error api_date=%s status=%s response=%s",
+                    api_date,
+                    status,
+                    response.text[:100],
+                )
+                return None
 
-        except RequestException as e:
-            print(f"Request failed ({attempt}/{max_retries}): {e}")
+        except RequestException as exc:
+            logger.warning(
+                "API request failed api_date=%s attempt=%s/%s error=%s",
+                api_date,
+                attempt,
+                max_retries,
+                exc,
+            )
             time.sleep(5)
 
-    print("All retries exhausted. Returning None.")
+    logger.error(
+        "API request did not complete api_date=%s max_attempts=%s",
+        api_date,
+        max_retries,
+    )
     return None

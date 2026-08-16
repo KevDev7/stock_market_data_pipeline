@@ -1,12 +1,14 @@
 """Backfill retained Snowflake raw rows into partitioned S3 landing objects."""
 
 import argparse
-import json
+import logging
 
 import pandas as pd
 
 from src.s3_client import S3RawClient
 from src.snowflake_client import SnowflakeClient
+
+logger = logging.getLogger(__name__)
 
 
 def backfill(start_date=None, end_date=None, dry_run=False):
@@ -26,9 +28,17 @@ def backfill(start_date=None, end_date=None, dry_run=False):
             (start_date, start_date, end_date, end_date),
         )
         dates = warehouse.cursor.fetchall()
-        print(f"Dates selected: {len(dates)}")
+        logger.info(
+            "Selected backfill dates start_date=%s end_date=%s dates=%s",
+            start_date,
+            end_date,
+            len(dates),
+        )
         if dry_run:
-            print(f"Rows selected: {sum(row_count for _, row_count in dates)}")
+            logger.info(
+                "Backfill dry run rows=%s",
+                sum(row_count for _, row_count in dates),
+            )
             return
 
         for api_date, expected_rows in dates:
@@ -37,7 +47,12 @@ def backfill(start_date=None, end_date=None, dry_run=False):
             object_key = archive.object_key(date_str, run_id)
             existing = archive.object_metadata(object_key)
             if existing and existing["row_count"] == expected_rows:
-                print(f"Skipping verified existing object for {date_str}")
+                logger.info(
+                    "Skipping verified archive api_date=%s rows=%s key=%s",
+                    date_str,
+                    expected_rows,
+                    object_key,
+                )
                 continue
 
             warehouse.cursor.execute(
@@ -63,12 +78,25 @@ def backfill(start_date=None, end_date=None, dry_run=False):
             )
             if len(restored) != expected_rows:
                 raise ValueError(f"S3 row-count mismatch for {date_str}")
-            print(json.dumps({"api_date": date_str, **result}, sort_keys=True))
+            logger.info(
+                "Archived backfill api_date=%s rows=%s bucket=%s key=%s "
+                "etag=%s sha256=%s",
+                date_str,
+                result["row_count"],
+                result["bucket"],
+                result["key"],
+                result["etag"],
+                result["sha256"],
+            )
     finally:
         warehouse.close()
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     parser = argparse.ArgumentParser()
     parser.add_argument("--start-date")
     parser.add_argument("--end-date")
