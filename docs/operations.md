@@ -6,7 +6,8 @@ The Airflow DAG `market_data_pipeline` runs Monday through Friday
 at noon Eastern. It targets the latest completed NYSE trading date and runs:
 
 ```text
-extract -> staging -> intermediate -> mart_staging -> marts -> tests
+ingest_raw_stock_data -> run_dbt_staging -> run_dbt_intermediate
+    -> run_dbt_mart_staging -> run_dbt_marts -> run_dbt_tests
 ```
 
 Source ingestion is currently paused because the paid provider subscription is

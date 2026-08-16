@@ -11,6 +11,7 @@ from src.snowflake_client import SnowflakeClient
 
 def backfill(start_date=None, end_date=None, dry_run=False):
     warehouse = SnowflakeClient()
+    warehouse.ensure_objects_exist()
     archive = S3RawClient()
     try:
         warehouse.cursor.execute(

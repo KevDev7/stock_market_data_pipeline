@@ -6,7 +6,7 @@ import pendulum
 import pandas_market_calendars as mcal
 from pendulum import duration
 from src.extraction import fetch_grouped_daily
-from src.load import load_data
+from src.load import archive_and_load_raw_data
 from src.snowflake_client import SnowflakeClient
 
 
@@ -21,12 +21,13 @@ def get_trading_days(start_date, end_date, calendar_name="NYSE"):
 def get_completed_dates():
     """Retrieve dates already completed through S3 and Snowflake loading."""
     client = SnowflakeClient()
+    client.ensure_objects_exist()
     completed = client.get_completed_dates()
     client.close()
     return completed
 
 
-def extract_load_data(years_back=2, days_back_override=None):
+def ingest_raw_stock_data(years_back=2, days_back_override=None):
     """
     Fetch Polygon.io/Massive.com grouped daily data, archive it in S3, load it into
     Snowflake RAW, and record ingestion checkpoints.
@@ -71,7 +72,7 @@ def extract_load_data(years_back=2, days_back_override=None):
         print(f"Processing {date_str} | Progress {i}/{total_days} (Remaining: {remaining_days})")
 
         df = fetch_grouped_daily(date_str)
-        load_data(df, date_str, run_id)
+        archive_and_load_raw_data(df, date_str, run_id)
 
         # Prevent API throttling
         time.sleep(20)
@@ -80,7 +81,15 @@ def extract_load_data(years_back=2, days_back_override=None):
     print("\nFinished processing all trading days.")
 
 
+def extract_load_data(years_back=2, days_back_override=None):
+    """Backward-compatible name for ingest_raw_stock_data()."""
+    return ingest_raw_stock_data(
+        years_back=years_back,
+        days_back_override=days_back_override,
+    )
+
+
 if __name__ == "__main__":
     # Override for short local runs during development
-    # extract_load_data(years_back=2)
-    extract_load_data(days_back_override=3)
+    # ingest_raw_stock_data(years_back=2)
+    ingest_raw_stock_data(days_back_override=3)
