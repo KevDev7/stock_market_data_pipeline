@@ -1,8 +1,9 @@
 import unittest
+from unittest.mock import patch
 
 import pandas as pd
 
-from src.load import load_data
+from src.load import archive_and_load_raw_data, load_data
 
 
 class FakeArchive:
@@ -24,6 +25,14 @@ class FakeSnowflake:
         self.fail_load = fail_load
         self.checkpoints = []
         self.load_call = None
+        self.setup_calls = 0
+        self.closed = False
+
+    def ensure_objects_exist(self):
+        self.setup_calls += 1
+
+    def close(self):
+        self.closed = True
 
     def record_checkpoint(self, **kwargs):
         self.checkpoints.append(kwargs)
@@ -74,6 +83,21 @@ class LoadDataTest(unittest.TestCase):
             ["started", "archived", "failed"],
         )
         self.assertIsNotNone(warehouse.checkpoints[-1]["s3_key"])
+
+    @patch("src.load.SnowflakeClient")
+    def test_owned_snowflake_client_is_set_up_and_closed(self, client_class):
+        warehouse = FakeSnowflake()
+        client_class.return_value = warehouse
+
+        archive_and_load_raw_data(
+            self.source,
+            "2026-01-14",
+            "run-1",
+            s3_client=FakeArchive(),
+        )
+
+        self.assertEqual(warehouse.setup_calls, 1)
+        self.assertTrue(warehouse.closed)
 
 
 if __name__ == "__main__":

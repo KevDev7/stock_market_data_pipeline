@@ -9,12 +9,12 @@ DBT_EXECUTABLE = "/home/airflow/.dbt-venv/bin/dbt"
 DBT_PROJECT_DIR = "/opt/airflow/dbt/stock_analytics"
 
 
-def extract_stock_data():
+def run_raw_stock_ingestion():
     # src/ is on PYTHONPATH inside the container (mapped to /opt/airflow/)
-    from src.extract_load_stocks import extract_load_data
+    from src.extract_load_stocks import ingest_raw_stock_data
 
     # For a daily schedule, only process the most recent date
-    extract_load_data(days_back_override=1)
+    ingest_raw_stock_data(days_back_override=1)
 
 
 with DAG(
@@ -33,9 +33,9 @@ with DAG(
     """,
 ) as market_data_pipeline:
 
-    extract = PythonOperator(
-        task_id="extract",
-        python_callable=extract_stock_data,
+    ingest_raw_stock_data_task = PythonOperator(
+        task_id="ingest_raw_stock_data",
+        python_callable=run_raw_stock_ingestion,
     )
 
     run_dbt_staging = BashOperator(
@@ -75,9 +75,9 @@ with DAG(
         bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} test --profiles-dir .",
     )
 
-    # Enforce the ELT order: extract -> dbt layers -> dbt tests
+    # Enforce the ELT order: raw ingestion -> dbt layers -> dbt tests
     (
-        extract
+        ingest_raw_stock_data_task
         >> run_dbt_staging
         >> run_dbt_intermediate
         >> run_dbt_mart_staging

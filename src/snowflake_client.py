@@ -13,10 +13,9 @@ class SnowflakeClient:
     """Handles connection, S3-backed raw loads, and ingestion checkpoints."""
 
     def __init__(self):
-        """Initialize connection, cursor, and ensure required Snowflake objects exist."""
+        """Initialize the Snowflake connection and cursor."""
         self.conn = self._connect()
         self.cursor = self.conn.cursor()
-        self._ensure_objects_exist()
 
     def _connect(self):
         """Establish a secure RSA-based connection to Snowflake."""
@@ -51,7 +50,7 @@ class SnowflakeClient:
         print("Connected to Snowflake successfully.")
         return conn
     
-    def _ensure_objects_exist(self):
+    def ensure_objects_exist(self):
         """Ensure database tables exist in configured schema and admin schema."""
         print("Checking or creating necessary tables...")
 
