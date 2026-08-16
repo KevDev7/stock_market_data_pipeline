@@ -17,7 +17,7 @@ Create the local environment file:
 cp .env.example .env
 ```
 
-Populate the provider, Snowflake, S3, stage, and private-key values documented
+Set the provider, Snowflake, S3, stage, and private-key values documented
 in `.env.example`. Historical `POLYGON_*` names and `api.polygon.io` remain
 supported after the provider's Massive.com rebrand.
 
@@ -33,7 +33,7 @@ keys, Snowflake private keys, `.env`, or Streamlit secrets.
 
 ## AWS and Snowflake Integration
 
-The checked-in infrastructure files document the current deployment and the
+The repository includes infrastructure files for the current deployment and the
 resources needed to recreate the S3 connection:
 
 - `infra/aws/stock-market-s3-iam.yaml`

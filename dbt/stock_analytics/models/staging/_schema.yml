@@ -48,7 +48,7 @@ models:
         description: "Flag indicating if OHLC prices are valid and consistent (1=valid, 0=invalid)"
 
   - name: stg_russell3000__constituents
-    description: "Historical Russell 3000 index constituents with temporal validity periods"
+    description: "Historical Russell 3000 index constituents with validity periods"
     columns:
       - name: ticker
         description: "Stock ticker symbol"

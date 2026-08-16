@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: prep_security_daily_momentum
-    description: "Gold staging model that prepares security-day momentum measures before dimensional publication."
+    description: "Gold staging model that prepares security-day momentum measures before loading the dimensional marts."
     columns:
       - name: ticker
         tests:
