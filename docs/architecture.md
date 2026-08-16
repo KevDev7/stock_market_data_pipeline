@@ -6,7 +6,7 @@
 
 `src/extraction.py` requests grouped daily aggregates from Polygon.io (now
 Massive.com) with `adjusted=true`. The ingestion code adds four operational
-fields while preserving each source row as JSON in `RAW_PAYLOAD`:
+fields and keeps each source row as JSON in `RAW_PAYLOAD`:
 
 - `API_DATE`: requested market date
 - `RUN_ID`: ingestion run identifier
@@ -20,10 +20,10 @@ s3://<bucket>/raw/polygon/grouped-daily/
   api_date=<date>/run_id=<run-id>/daily_stocks_raw.ndjson.gz
 ```
 
-Only after archival succeeds does Snowflake load that exact object through the
-external stage. The load atomically replaces the matching `API_DATE` in
-`RAW.DAILY_STOCKS_RAW`, making retries idempotent while S3 remains the replayable
-file archive.
+After archival succeeds, Snowflake loads the same object through the external
+stage. The load atomically replaces the matching `API_DATE` in
+`RAW.DAILY_STOCKS_RAW`, making retries idempotent. S3 remains the replayable file
+archive.
 
 ### Snowflake Layers
 
@@ -32,7 +32,7 @@ file archive.
 | `RAW` | Queryable source landing | `DAILY_STOCKS_RAW`, external stage, JSON file format |
 | `STAGING` | Parse JSON, cast fields, normalize seeds, flag invalid rows | `STG_DAILY_STOCKS`, `STG_RUSSELL3000__CONSTITUENTS` |
 | `INTERMEDIATE` | Join market rows to point-in-time Russell 3000 membership | `INT_RUSSELL3000__DAILY` |
-| `MART_STAGING` | Prepare rolling measures and publish-ready fact rows | Four `PREP_*` models |
+| `MART_STAGING` | Prepare rolling measures and final fact rows | Four `PREP_*` models |
 | `MARTS` | Conformed dimensions and analytics facts | Four dimensions and four facts |
 | `SEEDS` | Russell 3000 constituent CSV snapshots | `RUSSELL3000_*` |
 | `ADMIN` | Operational ingestion state | `INGESTION_CHECKPOINTS` |
@@ -107,4 +107,4 @@ duplicate work.
 - Snowflake clients and Streamlit authenticate with RSA private keys.
 
 The source provider renamed Polygon.io to Massive.com in October 2025. Runtime
-identifiers preserve the original name for compatibility and historical truth.
+identifiers keep the original name for compatibility and an accurate history.

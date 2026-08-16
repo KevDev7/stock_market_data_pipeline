@@ -2,12 +2,12 @@
 
 A production-style batch ELT pipeline for Russell 3000 market intelligence.
 Daily OHLCV data flows from Polygon.io (now Massive.com) through an Amazon S3
-raw archive into Snowflake, where dbt builds tested dimensional marts consumed
+raw archive into Snowflake, where dbt builds tested dimensional marts used
 by a hosted Streamlit dashboard.
 
 **[Open the live Russell 3000 Market Intelligence dashboard](https://russell3000-market-intelligence.streamlit.app/)**
 
-> The dashboard is a retained historical snapshot because paid source ingestion
+> The dashboard is a historical snapshot because paid source ingestion
 > is currently paused. The pipeline remains fully implemented and restartable.
 
 <p align="center">
@@ -21,7 +21,7 @@ by a hosted Streamlit dashboard.
 </p>
 
 The diagram groups `STAGING`, `INTERMEDIATE`, and `MART_STAGING` into one
-transformation station for readability. They remain separate schemas in the
+transformation section for readability. They remain separate schemas in the
 `MARKET` Snowflake database.
 
 | Concern | Technology | Role |
@@ -40,23 +40,23 @@ services.
 ## What It Demonstrates
 
 - **Replayable ingestion:** source JSON is archived in S3 before Snowflake
-  loading, enabling recovery and reprocessing.
+  loading, allowing recovery and reprocessing.
 - **Reliable loading:** idempotent daily loads and ingestion checkpoints support
   safe retries without duplicate data.
 - **Layered ELT:** `RAW -> STAGING -> INTERMEDIATE -> MART_STAGING -> MARTS`,
-  with business transformations executed by dbt inside Snowflake.
+  with business transformations run by dbt inside Snowflake.
 - **Incremental processing:** dbt models efficiently process new and affected
-  trading dates while preserving rolling-indicator accuracy.
+  trading dates while keeping rolling indicators accurate.
 - **Dimensional modeling:** conformed date, security, and sector dimensions are
   shared by a small fact constellation.
-- **Historical dimensions:** SCD Type 2 preserves changes to Russell 3000
+- **Historical dimensions:** SCD Type 2 tracks changes to Russell 3000
   security attributes over time.
 - **Data quality:** dbt tests validate keys, relationships, business rules,
   historical validity, and aggregate accuracy.
-- **Analytics delivery:** four Streamlit views expose market breadth, sector
+- **Analytics delivery:** four Streamlit views show market breadth, sector
   breadth, universe screening, and ticker momentum.
-- **Meaningful scale:** the retained dataset contains approximately 5.88 million
-  raw records across 539 trading dates.
+- **Meaningful scale:** the historical dataset contains approximately 5.88
+  million raw records across 539 trading dates.
 
 ## Dimensional Marts
 
@@ -121,7 +121,7 @@ provisioning a new S3/Snowflake integration or enabling the DAG.
 
 - Source ingestion is paused, so the hosted dashboard represents a historical
   portfolio snapshot rather than a real-time service.
-- The universe is limited to the retained Russell 3000 constituent snapshots.
+- The universe is limited to the available Russell 3000 constituent snapshots.
 - Adjusted aggregates are requested, but history is not automatically reloaded
   when a provider applies retroactive corporate-action changes.
 - This is an educational portfolio deployment, not a production SLA-backed
@@ -132,7 +132,7 @@ provisioning a new S3/Snowflake integration or enabling the DAG.
 Polygon.io rebranded as [Massive.com](https://massive.com/blog/polygon-is-now-massive)
 on October 30, 2025. Historical metadata, environment variables, S3 paths, and
 the supported `api.polygon.io` endpoint retain their original names because the
-retained data was ingested under the Polygon.io brand.
+historical data was ingested under the Polygon.io brand.
 
 ## License
 

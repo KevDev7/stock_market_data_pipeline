@@ -1,4 +1,4 @@
--- Prepares daily security-level momentum measures before dimensional publication.
+-- Prepares daily security-level momentum measures before loading the dimensional marts.
 {{ config(
     materialized = 'incremental',
     unique_key = ['ticker', 'trade_date'],

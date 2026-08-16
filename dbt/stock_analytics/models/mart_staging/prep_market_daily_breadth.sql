@@ -1,4 +1,4 @@
--- Prepares daily market-wide breadth measures before dimensional publication.
+-- Prepares daily market-wide breadth measures before loading the dimensional marts.
 {{ config(materialized = 'table') }}
 
 WITH base_aggregates AS (

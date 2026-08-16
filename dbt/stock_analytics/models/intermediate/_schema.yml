@@ -9,8 +9,8 @@ models:
       Filtered and enriched daily stock data for Russell 3000 constituents.
 
       This incremental table joins daily market data with Russell 3000
-      constituent information to provide point-in-time accurate index
-      membership and sector context.
+      constituent information to add point-in-time accurate index membership
+      and sector context.
 
       Derived analytics fields such as yesterday’s close and consecutive
       trading days are computed with incremental-safe logic.
@@ -53,7 +53,7 @@ models:
         description: Lowest price during the trading session
 
       - name: num_transactions
-        description: Total number of trades executed during the day
+        description: Total number of trades during the day
 
       - name: ingested_at
         description: |
@@ -102,8 +102,7 @@ models:
 
       - name: consecutive_trading_days
         description: |
-          Running count of retained daily observations for the ticker
-          within the enriched dataset.
+          Running count of stored daily rows for the ticker in this model.
 
       - name: yesterday_close
         description: |
@@ -129,4 +128,3 @@ models:
           column_name: index_weight
           min_value: 0
           max_value: 10
-

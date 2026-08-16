@@ -1,4 +1,4 @@
--- Prepares latest security-level snapshot measures before dimensional publication.
+-- Prepares the latest security-level snapshot measures before loading the dimensional marts.
 {{ config(materialized = 'table') }}
 
 WITH latest_snapshot AS (
