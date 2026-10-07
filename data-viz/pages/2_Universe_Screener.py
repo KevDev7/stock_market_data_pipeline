@@ -34,7 +34,7 @@ sectors = sectors_df["SECTOR"].dropna().tolist()
 
 st.sidebar.header("Filters")
 
-selected_sectors = st.sidebar.multiselect("Sectors", options=sectors)
+selected_sectors = st.sidebar.multiselect("Industry groups", options=sectors)
 rsi_min, rsi_max = st.sidebar.slider("Latest RSI Range", 0, 100, (20, 80))
 
 apply_return_filter = st.sidebar.checkbox(
@@ -157,7 +157,7 @@ with chart_col1:
         orientation="h",
         color="ticker_count",
         color_continuous_scale="Blues",
-        title="Median 1M Return by Sector",
+        title="Median 1M Return by Industry Group",
         labels={
             "median_return_1m_pct": "Median 1M Return %",
             "sector": "",
@@ -185,7 +185,7 @@ with chart_col2:
         labels={
             "return_1m_pct": "1M Return %",
             "latest_rsi": "Latest RSI",
-            "sector": "Sector",
+            "sector": "Industry group",
         },
     )
     fig.add_hline(y=70, line_dash="dot", line_color="#D92D20")

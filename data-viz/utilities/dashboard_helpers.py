@@ -104,5 +104,6 @@ def render_data_freshness(data_through=None, ticker_count=None):
         "Data through: "
         f"{format_date(data_through)}"
         " \u00b7 Coverage: "
-        f"{format_count(ticker_count)} tickers"
+        f"{format_count(ticker_count)} security identities"
     )
+    st.caption("SIC industry groups; Unknown is retained. Quarterly metadata observations are not strict as-known-then records.")

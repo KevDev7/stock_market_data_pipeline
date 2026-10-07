@@ -18,10 +18,10 @@ st.set_page_config(page_title="Home", layout="wide")
 apply_dashboard_style()
 
 render_page_intro(
-    "Russell 3000 Market Intelligence",
+    "U.S. Stock Market Intelligence",
     "Executive snapshot from Snowflake dimensional marts.",
 )
-st.caption("Historical portfolio snapshot. Scheduled market-data ingestion is currently paused.")
+st.caption("Historical study: 2024–2025. Provider-classified common stocks; SIC industry groups, not Russell 3000/GICS.")
 st.sidebar.success("Use the sidebar to navigate the marts")
 
 breadth_query = """
@@ -146,7 +146,7 @@ with right:
             x="pct_sector_over_sma50",
             y="sector_name",
             orientation="h",
-            title="Latest Sector Strength",
+            title="Latest Industry-Group Strength",
             labels={
                 "pct_sector_over_sma50": "% Over SMA50",
                 "sector_name": "",

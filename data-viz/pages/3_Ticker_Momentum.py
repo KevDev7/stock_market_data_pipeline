@@ -20,13 +20,13 @@ apply_dashboard_style()
 
 render_page_intro(
     "Ticker Momentum",
-    "Time-series signals for a single ticker from the trading momentum mart.",
+    "Time-series signals for one security identity; ticker reuse does not merge price histories.",
 )
 
 ticker_query = """
-    SELECT DISTINCT TICKER
+    SELECT SECURITY_KEY, TICKER, COMPANY, FIRST_TRADE_DATE, LATEST_TRADE_DATE
     FROM {securities_table}
-    ORDER BY TICKER
+    ORDER BY TICKER, FIRST_TRADE_DATE
 """.format(securities_table=qualified_table("DIM_SECURITY"))
 date_query = """
     SELECT MIN(TRADE_DATE) AS MIN_DATE, MAX(TRADE_DATE) AS MAX_DATE
@@ -36,9 +36,12 @@ date_query = """
 tickers_df = query_snowflake(ticker_query)
 dates_df = query_snowflake(date_query)
 
-tickers = tickers_df["TICKER"].dropna().tolist()
+security_labels = {
+    row.SECURITY_KEY: f"{row.TICKER} — {row.COMPANY} ({row.FIRST_TRADE_DATE} to {row.LATEST_TRADE_DATE})"
+    for row in tickers_df.itertuples(index=False)
+}
 
-if dates_df.empty:
+if dates_df.empty or not security_labels or pd.isna(dates_df.iloc[0]["MIN_DATE"]):
     st.warning("No momentum data available in the marts yet.")
     st.stop()
 
@@ -47,9 +50,10 @@ max_date = dates_df.iloc[0]["MAX_DATE"]
 
 st.sidebar.header("Filters")
 
-selected_ticker = st.sidebar.selectbox("Ticker", options=tickers)
+selected_security = st.sidebar.selectbox("Security / ticker", options=list(security_labels),
+                                        format_func=security_labels.get)
 
-default_start = pd.to_datetime(max_date) - pd.Timedelta(days=90)
+default_start = max(pd.to_datetime(min_date),pd.to_datetime(max_date) - pd.Timedelta(days=90))
 date_range = st.sidebar.date_input(
     "Trade Date Range",
     value=(default_start.date(), pd.to_datetime(max_date).date()),
@@ -73,7 +77,7 @@ row_limit = st.sidebar.number_input(
 
 query = f"""
     SELECT
-        s.TICKER,
+        COALESCE(h.TICKER,s.TICKER) AS TICKER,
         f.TRADE_DATE,
         f.OPEN,
         f.HIGH,
@@ -94,7 +98,9 @@ query = f"""
     FROM {qualified_table("FCT_SECURITY_DAILY_MOMENTUM")} AS f
     INNER JOIN {qualified_table("DIM_SECURITY")} AS s
         ON s.SECURITY_KEY = f.SECURITY_KEY
-    WHERE s.TICKER = '{selected_ticker}'
+    LEFT JOIN {qualified_table("DIM_SECURITY_HISTORY")} AS h
+        ON h.SECURITY_KEY=f.SECURITY_KEY AND f.TRADE_DATE BETWEEN h.VALID_FROM AND h.VALID_TO
+    WHERE f.SECURITY_KEY = '{selected_security}'
       AND f.TRADE_DATE BETWEEN '{start_date}' AND '{end_date}'
     ORDER BY f.TRADE_DATE DESC
     LIMIT {row_limit}
