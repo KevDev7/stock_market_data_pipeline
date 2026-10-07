@@ -19,7 +19,7 @@ apply_dashboard_style()
 
 render_page_intro(
     "Market Breadth",
-    "Market-wide participation, trend, and breadth health across the Russell 3000.",
+    "Market-wide participation, trend, and breadth health across provider-classified U.S.-listed common stocks.",
 )
 
 query = """

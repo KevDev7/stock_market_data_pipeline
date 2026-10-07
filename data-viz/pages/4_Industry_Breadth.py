@@ -14,13 +14,13 @@ from utilities.dashboard_helpers import (
 )
 from utilities.snowflake_helper import qualified_table, query_snowflake
 
-st.set_page_config(page_title="Sector Breadth", layout="wide")
+st.set_page_config(page_title="Industry Breadth", layout="wide")
 
 apply_dashboard_style()
 
 render_page_intro(
-    "Sector Breadth",
-    "Sector-level participation and momentum from the sector fact mart.",
+    "Industry Breadth",
+    "SIC industry-group participation and momentum from the historical marts.",
 )
 
 latest_query = """
@@ -79,7 +79,7 @@ latest_df = query_snowflake(latest_query)
 trend_df = query_snowflake(trend_query)
 
 if latest_df.empty:
-    st.warning("No sector breadth rows returned.")
+    st.warning("No industry breadth rows returned.")
     st.stop()
 
 latest_df.columns = latest_df.columns.str.lower()
@@ -91,7 +91,7 @@ weakest = latest_df.iloc[-1]
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Latest Trade Date", format_date(latest_date))
-col2.metric("Strongest Sector", strongest["sector_name"])
+col2.metric("Strongest Industry Group", strongest["sector_name"])
 col3.metric("Strongest % Over SMA50", format_return(strongest["pct_sector_over_sma50"]))
 col4.metric("Weakest % Over SMA50", format_return(weakest["pct_sector_over_sma50"]))
 
@@ -111,7 +111,7 @@ with left:
         orientation="h",
         color="sector_rsi",
         color_continuous_scale="RdYlGn",
-        title="Latest % of Sector Above SMA50",
+        title="Latest % of Industry Group Above SMA50",
         labels={
             "pct_sector_over_sma50": "% Over SMA50",
             "sector_name": "",
@@ -133,10 +133,10 @@ with right:
         size="stocks_traded",
         color="sector_name",
         hover_name="sector_name",
-        title="Sector Momentum vs Advance/Decline %",
+        title="Industry Momentum vs Advance/Decline %",
         labels={
             "ad_percentage": "A/D %",
-            "sector_rsi": "Sector RSI",
+            "sector_rsi": "Industry RSI",
             "stocks_traded": "Stocks traded",
         },
     )
@@ -152,10 +152,10 @@ with right:
 
 if not trend_df.empty:
     st.markdown("---")
-    st.markdown("**60-Day Sector Trend**")
+    st.markdown("**60-Day Industry Trend**")
 
     selected_sector = st.selectbox(
-        "Sector",
+        "Industry group",
         options=sorted(trend_df["sector_name"].dropna().unique()),
     )
     selected_trend = trend_df[trend_df["sector_name"] == selected_sector].copy()
@@ -172,7 +172,7 @@ if not trend_df.empty:
         x=selected_trend["trade_date"],
         y=selected_trend["sector_rsi"],
         mode="lines",
-        name="Sector RSI",
+        name="Industry RSI",
         yaxis="y2",
     ))
     fig.update_layout(
@@ -187,7 +187,7 @@ if not trend_df.empty:
     st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
-st.markdown("**Latest Sector Rows**")
+st.markdown("**Latest Industry Rows**")
 
 display_columns = [
     "sector_name",
@@ -231,4 +231,4 @@ st.dataframe(
 )
 
 render_data_freshness(data_through=latest_date)
-st.caption("Sector rows are built from the sector-day fact and conformed sector dimension.")
+st.caption("Industry groups use SIC major groups; missing classification remains Unknown.")
