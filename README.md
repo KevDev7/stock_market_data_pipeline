@@ -16,7 +16,7 @@ by a hosted Streamlit dashboard.
   <img src="assets/streamlit_app.png" width="100%" alt="Russell 3000 Market Intelligence dashboard">
 </p>
 
-## Pipeline Architecture
+## Data Architecture
 
 <p align="center">
   <img src="assets/stock-market-architecture.png" width="100%" alt="Stock market pipeline architecture: Massive API sources, S3 ingestion archive, four Snowflake processing layers, and one dashboard">
@@ -34,13 +34,13 @@ preserved. See the [refactor verification](docs/four-layer-refactor-results.json
 [Vector image](assets/stock-market-architecture.svg) ·
 [Detailed architecture](docs/architecture.md)
 
-## Tool Architecture
+## Vendor Architecture
 
 <p align="center">
-  <img src="assets/StockMarketELT-Arch.png" width="100%" alt="Tool architecture showing the API, Amazon S3, Snowflake, dbt, Streamlit, Apache Airflow, and Docker">
+  <img src="assets/StockMarketELT-Arch.png" width="100%" alt="Vendor architecture showing the API, Amazon S3, Snowflake, dbt, Streamlit, Apache Airflow, and Docker">
 </p>
 
-This technology overview is retained alongside the pipeline architecture above.
+This vendor overview is retained alongside the data architecture above.
 Its `Mart_Staging` label reflects the earlier design; the current pipeline has
 four processing layers, with that work consolidated into `MARTS`.
 
