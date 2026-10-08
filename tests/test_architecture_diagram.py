@@ -184,7 +184,7 @@ class ArchitectureDiagramTests(unittest.TestCase):
             ('Data Quality · dbt Tests',),
             ('Pipeline Orchestration · Airflow',),
         ])
-        self.assertEqual(self.boxes['policy-RAW-0'].lines, ('1:1 Copy',))
+        self.assertEqual(self.boxes['policy-RAW-1'].lines, ('1:1 Copy',))
         self.assertEqual(self.boxes['warehouse-title'].lines, ('Data Warehouse',))
         self.assertEqual(self.boxes['input-contract'].lines,
                          ('DATA CONTRACT', 'Sources → My Platform'))
@@ -216,7 +216,42 @@ class ArchitectureDiagramTests(unittest.TestCase):
             self.assertEqual(self.boxes[f'policy-title-{layer}'].lines, ('Rules',))
             actual = [box.lines for box in self.diagram.boxes
                       if box.id.startswith(f'policy-{layer}-')]
-            self.assertEqual(actual, [(rule,) for rule in rules])
+            self.assertCountEqual(actual, [(rule,) for rule in rules])
+
+    def test_contrasting_rules_share_visual_rows(self):
+        def rule(layer, text):
+            return next(box for box in self.diagram.boxes
+                        if box.id.startswith(f'policy-{layer}-')
+                        and box.lines == (text,))
+
+        groups = [
+            [('RAW', 'No Transformations'), ('STAGING', 'Cleanup Transformations'),
+             ('INTERMEDIATE', 'No Cleanup'), ('MARTS', 'No Cleanup')],
+            [('STAGING', 'No Cross-Source Joins'), ('INTERMEDIATE', 'Cross-Source Joins')],
+            [('STAGING', 'No Enrichment'), ('INTERMEDIATE', 'Enrichment')],
+            [(layer, 'Dimensional Modeling' if layer == 'MARTS'
+              else 'No Dimensional Modeling')
+             for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS')],
+            [(layer, 'Views' if layer == 'STAGING' else 'Tables')
+             for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS')],
+            [('RAW', 'Partial Overwrite'), ('INTERMEDIATE', 'Full/Partial Overwrite'),
+             ('MARTS', 'Full/Partial Overwrite')],
+        ]
+        rows = []
+        for group in groups:
+            positions = {rule(layer, text).y for layer, text in group}
+            self.assertEqual(len(positions), 1, group)
+            rows.append(positions.pop())
+        self.assertEqual(rows, sorted(rows))
+        cleanup_details = ['Cleanup Transformations', 'Rename', 'Casting', 'Deduplication']
+        for first, second in zip(cleanup_details, cleanup_details[1:]):
+            self.assertEqual(rule('STAGING', second).y - rule('STAGING', first).y, 22)
+        self.assertLess(rule('STAGING', 'Deduplication').y,
+                        rule('STAGING', 'No Cross-Source Joins').y)
+        for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS'):
+            rules = [box for box in self.diagram.boxes
+                     if box.id.startswith(f'policy-{layer}-')]
+            self.assertEqual([box.y for box in rules], sorted(box.y for box in rules))
 
     def test_every_layer_has_one_explicit_object_type(self):
         for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS'):

@@ -230,7 +230,7 @@ def build_diagram():
     # Operational manifests/checkpoints remain implemented but are omitted here.
     d.box("source-zone", 150, 228, 205, 430, kind="container", fill="#ffffff", stroke=PALE_BORDER, dashed=True)
     d.box("ingest-zone", 400, 228, 265, 430, kind="container", fill="#ffffff", stroke=PALE_BORDER, dashed=True)
-    d.box("warehouse", 706, 182, 1006, 718, kind="container", fill="#ffffff", stroke="#777777", dashed=True)
+    d.box("warehouse", 706, 182, 1006, 740, kind="container", fill="#ffffff", stroke="#777777", dashed=True)
     d.box("consumer-zone", 1760, 228, 270, 365, kind="container", fill="#ffffff", stroke=PALE_BORDER, dashed=True)
     layers = [
         ("RAW", 740, 210, "#fcebd6", "#bf914b"),
@@ -284,19 +284,29 @@ def build_diagram():
                     178, product_height, product_lines,
                     fill=DATA, stroke="#93a9c0", font=17)
 
+    # Shared row slots make related permissions and restrictions comparable.
+    # Missing entries are whitespace, not additional or implied policy choices.
     policies = {
-        "RAW": ["1:1 Copy", "No Transformations", "No Dimensional Modeling", "Tables", "Partial Overwrite"],
-        "STAGING": ["Cleanup Transformations", "Rename", "Casting", "Deduplication", "No Cross-Source Joins", "No Enrichment", "No Dimensional Modeling", "Views"],
-        "INTERMEDIATE": ["Cross-Source Joins", "Enrichment", "Shared Business Rules", "No Cleanup", "No Dimensional Modeling", "Tables", "Full/Partial Overwrite"],
-        "MARTS": ["Analytical Calculations", "Dimensional Modeling", "Tables", "No Cleanup", "Full/Partial Overwrite"],
+        "RAW": [(0, "No Transformations"), (1, "1:1 Copy"),
+                (6, "No Dimensional Modeling"), (7, "Tables"), (8, "Partial Overwrite")],
+        "STAGING": [(0, "Cleanup Transformations"), (1, "Rename"), (2, "Casting"),
+                    (3, "Deduplication"), (4, "No Cross-Source Joins"),
+                    (5, "No Enrichment"), (6, "No Dimensional Modeling"), (7, "Views")],
+        "INTERMEDIATE": [(0, "No Cleanup"), (1, "Shared Business Rules"),
+                         (4, "Cross-Source Joins"), (5, "Enrichment"),
+                         (6, "No Dimensional Modeling"), (7, "Tables"),
+                         (8, "Full/Partial Overwrite")],
+        "MARTS": [(0, "No Cleanup"), (1, "Analytical Calculations"),
+                  (6, "Dimensional Modeling"), (7, "Tables"),
+                  (8, "Full/Partial Overwrite")],
     }
     for name, x, width, *_ in layers:
         d.box(f"policy-title-{name}", x, 614, width, 28, ["Rules"], kind="text", font=18, bold=True, underline=True)
         lines = policies[name]
         line_height = 22
         # Individual text rows keep both SVG and diagrams.net easy to edit.
-        for i, line in enumerate(lines):
-            d.box(f"policy-{name}-{i}", x-5, 650+i*line_height, width+10, 22, [line], kind="text", font=16)
+        for i, (row, line) in enumerate(lines):
+            d.box(f"policy-{name}-{i}", x-5, 650+row*line_height, width+10, 22, [line], kind="text", font=16)
 
     d.box("stock-dashboard", 1768, 392, 254, 86, ["Stock Market Dashboard", "BI Project"], font=17, icon="chart", icon_right=True, icon_color="#ce5353")
 
@@ -328,9 +338,9 @@ def build_diagram():
         "Pipeline Orchestration · Airflow",
     ]
     for i, line in enumerate(capabilities):
-        d.box(f"capability-{i}", 780, 846+i*30, 848, 30, [line], font=17)
-    d.box("source-orientation", 150, 958, 1058, 40, ["SOURCE SYSTEM ORIENTED"], kind="right-arrow", fill=BLUE, stroke=BLUE_EDGE, font=17)
-    d.box("business-orientation", 1220, 958, 810, 40, ["BUSINESS ORIENTED"], kind="left-arrow", fill="#f8dfe0", stroke="#be7478", font=17)
+        d.box(f"capability-{i}", 780, 868+i*30, 848, 30, [line], font=17)
+    d.box("source-orientation", 150, 980, 1058, 40, ["SOURCE SYSTEM ORIENTED"], kind="right-arrow", fill=BLUE, stroke=BLUE_EDGE, font=17)
+    d.box("business-orientation", 1220, 980, 810, 40, ["BUSINESS ORIENTED"], kind="left-arrow", fill="#f8dfe0", stroke="#be7478", font=17)
     return d
 
 
