@@ -22,18 +22,6 @@ by a hosted Streamlit dashboard.
   <img src="assets/stock-market-architecture.png" width="100%" alt="Stock market pipeline architecture: Massive API sources, S3 ingestion archive, four Snowflake processing layers, and one dashboard">
 </p>
 
-The diagram shows all four processing layers in the `MARKET` Snowflake database,
-their responsibilities, and the dated reference-metadata path. The warehouse
-migration completed on 2026-10-07 after full-history validation, with old schemas
-retained for recovery. See the [verified migration results](docs/reference-migration-results.json).
-The four-layer consolidation was applied on 2026-10-08: analytical preparation
-now belongs to MARTS, with eight published tables and the dashboard structure
-preserved. See the [refactor verification](docs/four-layer-refactor-results.json).
-
-[Editable diagrams.net file](assets/stock-market-architecture.drawio) ·
-[Vector image](assets/stock-market-architecture.svg) ·
-[Detailed architecture](docs/architecture.md)
-
 ## Vendor Architecture
 
 <p align="center">
