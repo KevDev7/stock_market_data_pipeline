@@ -34,6 +34,16 @@ preserved. See the [refactor verification](docs/four-layer-refactor-results.json
 [Vector image](assets/stock-market-architecture.svg) ·
 [Detailed architecture](docs/architecture.md)
 
+## Tool Architecture
+
+<p align="center">
+  <img src="assets/StockMarketELT-Arch.png" width="100%" alt="Tool architecture showing the API, Amazon S3, Snowflake, dbt, Streamlit, Apache Airflow, and Docker">
+</p>
+
+This technology overview is retained alongside the pipeline architecture above.
+Its `Mart_Staging` label reflects the earlier design; the current pipeline has
+four processing layers, with that work consolidated into `MARTS`.
+
 | Concern | Technology | Role |
 |---|---|---|
 | Source | Polygon.io / Massive.com | Grouped daily prices, dated ticker catalogs, and issuer overviews |
