@@ -1,0 +1,88 @@
+{
+  "applied_on": "2026-10-08",
+  "status": "live_four_layer_refactor_applied_and_verified",
+  "database": "MARKET",
+  "processing_layers": ["RAW", "STAGING", "INTERMEDIATE", "MARTS"],
+  "responsibilities": {
+    "RAW": "Preserve source records with operational metadata",
+    "STAGING": "Standardize and validate each source",
+    "INTERMEDIATE": "Integrate shared identity, eligibility, enrichment, and record history",
+    "MARTS": "Calculate analytical measures and publish dimensional products"
+  },
+  "implementation": {
+    "shared_calculation_table": "MARKET.MARTS.CALC_SECURITY_DAILY_MOMENTUM",
+    "other_preparation_models_folded_into_facts": 3,
+    "published_dimensions": 4,
+    "published_facts": 4,
+    "active_mart_staging_schema_exists": false,
+    "airflow_task_count": 6,
+    "dag_schedule_changed": false
+  },
+  "verification": {
+    "local_tests_passed": 60,
+    "candidate_models_built": 15,
+    "candidate_tests_passed": 109,
+    "candidate_full_build_elapsed_seconds": 183.49,
+    "active_tests_passed": 109,
+    "dbt_errors_warnings_skips": 0,
+    "candidate_dashboard_pages_passed": 5,
+    "active_dashboard_pages_passed": 5,
+    "local_dashboard_check_role": "ACCOUNTADMIN",
+    "isolated_airflow_import_and_six_task_dependencies_passed": true,
+    "docker_compose_configuration_passed": true,
+    "unchanged_source_incremental_retries_passed": 2,
+    "price_correction_removal_new_security_and_retry_passed": true,
+    "empty_replacement_window_matches_full_build": true,
+    "transaction_rollback_passed": true,
+    "rollback_rows_deleted_before_intentional_failure": 15490,
+    "rollback_target_rows_and_hash_unchanged": true,
+    "published_column_names_types_order_grains_and_row_counts_unchanged": true,
+    "published_value_comparison_different_rows": 0,
+    "comparison_float_absolute_tolerance": 1e-9,
+    "comparison_float_relative_tolerance": 1e-10,
+    "exact_comparison_fields": "Keys, dates, source prices, and integer flags",
+    "exact_fingerprint_tables": [
+      "DIM_DATE", "DIM_SECTOR", "DIM_SECURITY", "DIM_SECURITY_HISTORY",
+      "FCT_SECURITY_DAILY_MOMENTUM"
+    ],
+    "tables_with_execution_plan_float_rounding_only": [
+      "FCT_SECURITY_CURRENT_SNAPSHOT", "FCT_MARKET_DAILY_BREADTH", "FCT_SECTOR_DAILY_BREADTH"
+    ]
+  },
+  "published_mart_row_counts": {
+    "DIM_DATE": 502,
+    "DIM_SECTOR": 71,
+    "DIM_SECURITY": 6543,
+    "DIM_SECURITY_HISTORY": 8550,
+    "FCT_SECURITY_DAILY_MOMENTUM": 2567657,
+    "FCT_SECURITY_CURRENT_SNAPSHOT": 5159,
+    "FCT_MARKET_DAILY_BREADTH": 502,
+    "FCT_SECTOR_DAILY_BREADTH": 35141
+  },
+  "preserved_state": {
+    "raw_price_rows": 8270826,
+    "raw_price_count_and_fingerprint_unchanged": true,
+    "source_completeness_and_scd_fact_coverage_verified": true,
+    "all_schema_future_and_existing_object_grants_preserved": true,
+    "hosted_reader_select_grants_preserved": 8,
+    "dashboard_code_and_structure_changed": false,
+    "user_role_assignments_or_saved_credentials_changed": false,
+    "new_api_requests_made": false,
+    "s3_or_live_raw_data_modified": false,
+    "ingestion_restarted_or_dag_unpaused": false,
+    "hosted_dashboard_code_deployed_or_cache_reset": false
+  },
+  "retained_recovery_schemas": [
+    "MARKET.BACKUP_STAGING_FOUR_LAYER_20261008",
+    "MARKET.BACKUP_INTERMEDIATE_FOUR_LAYER_20261008",
+    "MARKET.BACKUP_MARTS_FOUR_LAYER_20261008",
+    "MARKET.BACKUP_MART_STAGING_FOUR_LAYER_20261008"
+  ],
+  "owned_test_databases_removed": ["PREPUSH_TEST_CCC33164BB91", "PREPUSH_TEST_64FBF0AF2B76"],
+  "diagram": {
+    "editable_source": "assets/stock-market-architecture.drawio",
+    "png": "assets/stock-market-architecture.png",
+    "native_drawio_exports_and_four_layer_routes_verified": true
+  },
+  "cost_note": "Derived model rebuilds and tests consume Snowflake compute. No API backfill was needed. Build elapsed time is not total task credit usage."
+}

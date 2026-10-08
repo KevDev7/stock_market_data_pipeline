@@ -2,7 +2,7 @@
 WITH dates AS (
     SELECT
         (SELECT MAX(trade_date) FROM {{ ref('fct_security_daily_momentum') }}) AS model_latest_date,
-        (SELECT MAX(trade_date) FROM {{ ref('int_russell3000__daily') }}) AS upstream_latest_date
+        (SELECT MAX(trade_date) FROM {{ ref('int_market__daily') }}) AS upstream_latest_date
 )
 SELECT *
 FROM dates

@@ -3,6 +3,8 @@ WITH raw_rows AS (
     SELECT
         API_DATE AS trade_date,
         INGESTED_AT AS ingested_at,
+        RUN_ID AS run_id,
+        RAW_PAYLOAD AS source_payload,
         TRY_PARSE_JSON(RAW_PAYLOAD) AS payload
     FROM {{ source('raw_market', 'DAILY_STOCKS_RAW') }}
     WHERE API_DATE IS NOT NULL
@@ -19,7 +21,9 @@ typed AS (
         TRY_TO_DOUBLE(payload:"l"::STRING) AS low,
         TRY_TO_NUMBER(payload:"n"::STRING) AS num_transactions,
         trade_date,
-        ingested_at
+        ingested_at,
+        run_id,
+        source_payload
     FROM raw_rows
     WHERE payload IS NOT NULL
 )
@@ -48,3 +52,9 @@ SELECT
     ) AS is_valid_record
 FROM typed
 WHERE trade_date IS NOT NULL
+-- Source duplicate selection belongs here, before any joins or window metrics.
+-- Prefer the latest delivery; payload order makes equal-delivery ties repeatable.
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY ticker, trade_date
+    ORDER BY ingested_at DESC NULLS LAST, run_id DESC NULLS LAST, source_payload ASC
+) = 1

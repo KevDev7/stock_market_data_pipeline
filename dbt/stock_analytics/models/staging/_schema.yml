@@ -5,7 +5,13 @@ version: 2
 
 models:
   - name: stg_daily_stocks
-    description: "Staging table for daily stock market data with validation flags"
+    description: |
+      Source-standardized daily stock view with validation flags.
+      One row per ticker/date: latest ingestion, then run ID, then ascending
+      source payload for repeatable ties. Invalid prices remain flagged here.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [ticker, trade_date]
     columns:
       - name: ticker
         description: "Stock ticker symbol"
@@ -48,7 +54,13 @@ models:
         description: "Flag indicating if OHLC prices are valid and consistent (1=valid, 0=invalid)"
 
   - name: stg_russell3000__constituents
-    description: "Historical Russell 3000 index constituents with validity periods"
+    description: |
+      Standardized constituent snapshots, one row per ticker/snapshot date.
+      Duplicate source rows prefer highest market value, then descriptive fields.
+      Membership validity periods are assigned only in INTERMEDIATE.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [ticker, snapshot_date]
     columns:
       - name: ticker
         description: "Stock ticker symbol"
@@ -82,8 +94,7 @@ models:
       - name: market_weight
         description: "Weight of the stock in the Russell 3000 index"
 
-      - name: valid_from
-        description: "Start date for which this row is valid"
-        
-      - name: valid_to
-        description: "End date for which this row is valid"
+      - name: snapshot_date
+        description: "Date encoded by the source snapshot file; not an inferred membership start."
+        tests:
+          - not_null

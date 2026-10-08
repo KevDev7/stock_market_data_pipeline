@@ -62,3 +62,4 @@ airflow/airflow.db
 airflow/webserver_config.py
 data-viz/.streamlit/secrets.toml
 *.pem
+.cache/

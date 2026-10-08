@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::stock-market-data-pipeline-645968351825-us-east-1",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": ["raw/massive/reference", "raw/massive/reference/*"]
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:GetObjectVersion"],
+      "Resource": "arn:aws:s3:::stock-market-data-pipeline-645968351825-us-east-1/raw/massive/reference/*"
+    }
+  ]
+}

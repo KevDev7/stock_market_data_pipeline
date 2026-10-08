@@ -13,7 +13,8 @@ from src.config import AWS
 class S3RawClient:
     """Archives and retrieves versioned raw landing records in Amazon S3."""
 
-    def __init__(self, bucket=None, prefix=None, region=None, client=None):
+    def __init__(self, bucket=None, prefix=None, region=None, client=None,
+                 filename="daily_stocks_raw.ndjson.gz"):
         self.bucket = bucket or AWS["s3_bucket"]
         self.prefix = (prefix or AWS["s3_prefix"]).strip("/")
         if not self.bucket:
@@ -21,6 +22,9 @@ class S3RawClient:
         self.client = client or boto3.client(
             "s3", region_name=region or AWS["region"]
         )
+        if filename not in {'daily_stocks_raw.ndjson.gz', 'reference_raw.ndjson.gz'}:
+            raise ValueError('Unsupported raw archive filename')
+        self.filename = filename
 
     def archive_dataframe(self, df, date_str, run_id):
         """Write one gzip NDJSON object and return its archive metadata."""
@@ -84,7 +88,7 @@ class S3RawClient:
     def object_key(self, date_str, run_id):
         return (
             f"{self.prefix}/api_date={date_str}/run_id={run_id}/"
-            "daily_stocks_raw.ndjson.gz"
+            f"{self.filename}"
         )
 
     @staticmethod

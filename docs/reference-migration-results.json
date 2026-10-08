@@ -1,0 +1,95 @@
+{
+  "completed_on": "2026-10-07",
+  "status": "warehouse_cutover_verified",
+  "subsequent_pre_push_checks": "prepush-verification-results.json and sma-fix-rebuild-results.json; crossover fix applied and verified in live schemas; hosted reader role and read-only MARKET access verified in hosted-dashboard-access-results.json",
+  "reporting_period": ["2024-01-01", "2025-12-31"],
+  "warmup_start": "2022-12-29",
+  "warmup_exchange_sessions": 252,
+  "source_exchange_sessions": 754,
+  "reporting_exchange_sessions": 502,
+  "universe": "Massive provider-classified U.S.-listed common stocks, not Russell 3000 membership",
+  "industry_classification": "SIC major groups; missing codes remain Unknown; not GICS",
+  "baseline_and_quarterly_snapshot_dates": [
+    "2024-01-02", "2024-03-28", "2024-06-28", "2024-09-30", "2024-12-31",
+    "2025-03-31", "2025-06-30", "2025-09-30", "2025-12-31"
+  ],
+  "source_ingestion": {
+    "catalog_dates": 754,
+    "catalog_records": 4001116,
+    "issuer_observation_dates_including_first_observed_issuers": 425,
+    "issuer_observation_records": 47162,
+    "requested_overviews_not_returned": 0,
+    "retained_price_dates_refreshed": 530,
+    "retained_raw_price_dates_including_outside_reporting_window": 763,
+    "retained_raw_price_records": 8270826,
+    "missing_price_dates": [],
+    "missing_catalog_dates": [],
+    "missing_quarterly_snapshots": [],
+    "missing_adjusted_refresh_dates": []
+  },
+  "active_mart_row_counts": {
+    "DIM_DATE": 502,
+    "DIM_SECURITY": 6543,
+    "DIM_SECURITY_HISTORY": 8550,
+    "DIM_SECTOR": 71,
+    "FCT_SECURITY_DAILY_MOMENTUM": 2567657,
+    "FCT_SECURITY_CURRENT_SNAPSHOT": 5159,
+    "FCT_MARKET_DAILY_BREADTH": 502,
+    "FCT_SECTOR_DAILY_BREADTH": 35141
+  },
+  "published_reference_quality": {
+    "accepted_security_days": 2567657,
+    "unknown_industry_days": 395493,
+    "fallback_identity_days": 393121,
+    "type_review_days": 28599,
+    "temporary_trading_line_days": 189,
+    "missing_issuer_observation_days": 0
+  },
+  "validation": {
+    "unit_tests_passed": 41,
+    "candidate_models_built": 18,
+    "candidate_warehouse_tests_passed": 126,
+    "active_warehouse_tests_passed": 126,
+    "warehouse_test_errors_warnings_skips": 0,
+    "every_fact_row_has_scd_history_coverage": true,
+    "candidate_dashboard_views_passed": 5,
+    "active_dashboard_views_passed": 5,
+    "dashboard_reader_schema_usage_preserved": true,
+    "dashboard_reader_table_select_grants_preserved": 8,
+    "dashboard_reader_future_table_and_view_select_preserved": true,
+    "docker_compose_configuration_valid": true,
+    "python_compilation_passed": true,
+    "git_diff_whitespace_check_passed": true,
+    "airflow_runtime_check": "Subsequent isolated Docker dependency, DAG and task-module import checks passed; ingestion was not executed or resumed; see prepush-verification-results.json"
+  },
+  "active_dashboard_smoke_results": [
+    {"page": "streamlit_app.py", "exceptions": 0, "charts": 2, "dataframes": 0, "metrics": 8},
+    {"page": "1_Market_Breadth.py", "exceptions": 0, "charts": 4, "dataframes": 1, "metrics": 8},
+    {"page": "2_Universe_Screener.py", "exceptions": 0, "charts": 2, "dataframes": 1, "metrics": 3},
+    {"page": "3_Ticker_Momentum.py", "exceptions": 0, "charts": 1, "dataframes": 1, "metrics": 5},
+    {"page": "4_Industry_Breadth.py", "exceptions": 0, "charts": 3, "dataframes": 1, "metrics": 4}
+  ],
+  "retained_snowflake_backups": [
+    "MARKET.RAW.DAILY_STOCKS_RAW_BEFORE_REFERENCE_20261007",
+    "MARKET.BACKUP_STAGING_20261007",
+    "MARKET.BACKUP_INTERMEDIATE_20261007",
+    "MARKET.BACKUP_MART_STAGING_20261007",
+    "MARKET.BACKUP_MARTS_20261007",
+    "MARKET.BACKUP_STAGING_SMA_FIX_20261007",
+    "MARKET.BACKUP_INTERMEDIATE_SMA_FIX_20261007",
+    "MARKET.BACKUP_MART_STAGING_SMA_FIX_20261007",
+    "MARKET.BACKUP_MARTS_SMA_FIX_20261007"
+  ],
+  "retained_provenance": ["Original S3 run objects", "Four inactive legacy CSV seeds and SEEDS tables"],
+  "limitations": [
+    "Quarterly issuer metadata approximates changes and is not strict as-known-then history",
+    "Provider SIC codes are missing for approximately 15.4% of priced reporting observations",
+    "Approximately 15.3% of priced reporting observations use issuer/ticker fallback identity",
+    "Identifier changes can split histories; complete corporate-action identity continuity is not claimed",
+    "Provider CS classification anomalies are flagged for review, not silently discarded",
+    "Index weights are NULL; prices are split-adjusted, not total-return adjusted",
+    "Future provider split adjustments require a coordinated historical price refresh"
+  ],
+  "not_performed": ["Airflow restart or resume", "Push of remaining pipeline changes to remote main"],
+  "subsequent_hosted_dashboard_deployment": "hosted-dashboard-deployment-results.json; dashboard-only commit deployed and all five hosted views verified"
+}

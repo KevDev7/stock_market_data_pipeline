@@ -1,0 +1,10 @@
+version: 2
+sources:
+  - name: raw_reference
+    database: "{{ env_var('SNOWFLAKE_DATABASE', 'MARKET') }}"
+    schema: RAW
+    tables:
+      - name: REFERENCE_RAW
+        description: Untouched Massive reference responses with operational envelopes.
+      - name: REFERENCE_MANIFEST
+        description: Atomic completion records for complete source/date batches.

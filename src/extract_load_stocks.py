@@ -2,6 +2,7 @@
 # Pipeline entrypoint for Polygon.io/Massive.com extraction and raw loading.
 
 import logging
+import datetime as dt
 import time
 
 import pendulum
@@ -32,6 +33,15 @@ def get_completed_dates():
     return completed
 
 
+def latest_completed_trading_day(today=None):
+    """Shared completed-session rule for price and reference ingestion."""
+    today=today or pendulum.now('America/New_York').date()
+    days=get_trading_days(today-dt.timedelta(days=10),today-dt.timedelta(days=1))
+    if days.empty:
+        raise ValueError('No completed exchange session in the recent calendar')
+    return days[-1].date()
+
+
 def ingest_raw_stock_data(years_back=2, days_back_override=None):
     """
     Fetch Polygon.io/Massive.com grouped daily data, archive it in S3, load it into
@@ -44,13 +54,7 @@ def ingest_raw_stock_data(years_back=2, days_back_override=None):
     end_date = today - duration(days=1)
 
     if days_back_override == 1:
-        calendar = mcal.get_calendar("NYSE")
-        schedule = calendar.schedule(
-            start_date=today.subtract(days=10),
-            end_date=today
-        )
-        last_trading_day = schedule.index[schedule.index < today][-1].date()
-        start_date = end_date = last_trading_day
+        start_date = end_date = latest_completed_trading_day(today)
     elif days_back_override:
         start_date = end_date - duration(days=days_back_override)
     else:

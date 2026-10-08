@@ -4,22 +4,45 @@
 version: 2
 
 models:
+  - name: int_russell3000__membership
+    description: |
+      Authoritative snapshot-derived constituent membership windows, shared by
+      daily enrichment and the history dimension. Each snapshot applies until
+      the day before the next available snapshot. The earliest snapshot is
+      backcast to membership_history_start (default 2023-01-01), a portfolio
+      approximation rather than independently verified historical membership.
+      Rebuilt as a table so every consumer sees the same current window policy.
+    columns:
+      - name: ticker
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: valid_from
+        tests: [not_null]
+      - name: valid_to
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [ticker, snapshot_date]
+
   - name: int_russell3000__daily
     description: |
       Filtered and enriched daily stock data for Russell 3000 constituents.
 
       This incremental table joins daily market data with Russell 3000
-      constituent information to add point-in-time accurate index membership
-      and sector context.
+      shared snapshot-derived membership windows and sector context. The
+      documented earliest-snapshot backcast is not verified historical membership.
 
-      Derived analytics fields such as yesterday’s close and consecutive
-      trading days are computed with incremental-safe logic.
+      Only rows with a ticker, valid OHLC prices, and positive volume enter this
+      analytical base. Previous accepted close, observation count, and first
+      observation are established here before any downstream rolling calculations.
 
       Intended Cadence: One scheduled weekday run; ingestion is currently paused
       Grain: One row per ticker per trade_date
       History: 2+ years
       Materialization: Incremental
       Unique Key: (ticker, trade_date)
+      Write behavior: atomic replacement of the recent correction window
 
     columns:
       - name: ticker
@@ -69,8 +92,13 @@ models:
       - name: is_valid_record
         description: |
           Data quality validation flag.
-          1 = Prices and volume pass logical consistency checks
-          0 = Failed validation rules
+          1 = OHLC prices pass the staging consistency checks.
+          All rows in this analytical base have this flag set to 1; positive
+          volume is checked separately through has_volume.
+        tests:
+          - accepted_values:
+              values: [1]
+              quote: false
 
       - name: sector
         description: |
@@ -100,28 +128,28 @@ models:
           Weight of the stock within the Russell 3000 index (percentage).
           Updated during periodic index rebalancing.
 
-      - name: consecutive_trading_days
+      - name: observation_count
         description: |
-          Running count of stored daily rows for the ticker in this model.
+          Running count of accepted observations for this ticker. Gaps do not
+          reset the count; it is not a consecutive-trading-day streak.
 
       - name: yesterday_close
         description: |
-          Previous trading day’s closing price.
-          Handles weekends, holidays, and incremental load boundaries.
-          NULL for the first observed trading day.
+          Previous accepted observation's close, across calendar gaps and
+          incremental boundaries. NULL for the first accepted observation.
 
-      - name: is_new_to_index
+      - name: is_first_observation
         description: |
-          Binary flag indicating index entry.
-          1 = First day the ticker appears in Russell 3000
-          0 = Existing constituent
+          1 for the first accepted observation of the ticker in this dataset,
+          otherwise 0. Does not claim an actual index-entry or re-entry event.
+        tests:
+          - accepted_values:
+              values: [0, 1]
+              quote: false
 
     tests:
-      # Enforce uniqueness at the fact grain for recent data
-      - unique:
-          column_name: "ticker || '-' || TO_VARCHAR(trade_date)"
-          config:
-            where: "trade_date >= DATEADD(day, -30, CURRENT_DATE())"
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [ticker, trade_date]
 
       # Sanity check on index weights
       - dbt_expectations.expect_column_values_to_be_between:

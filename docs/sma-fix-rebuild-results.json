@@ -1,0 +1,67 @@
+{
+  "applied_on": "2026-10-07",
+  "status": "live_rebuild_applied_and_verified",
+  "database": "MARKET",
+  "fix": "Fixed-point moving-average accumulation; published SMA columns remain DOUBLE",
+  "reporting_period": ["2024-01-01", "2025-12-31"],
+  "warmup_start": "2022-12-29",
+  "deployment": {
+    "candidate_prefix": "SMA_FIX_20261007_",
+    "full_rebuild_models": 18,
+    "candidate_warehouse_tests_passed": 126,
+    "active_warehouse_tests_passed": 126,
+    "errors_warnings_skips": 0,
+    "candidate_dashboard_views_passed": 5,
+    "active_dashboard_views_passed": 5,
+    "dashboard_check_role": "ACCOUNTADMIN",
+    "unit_tests_passed": 42,
+    "all_four_layer_schemas_switched": true,
+    "consumer_marts_switched_together": true
+  },
+  "contracts_and_permissions": {
+    "schema_names_unchanged": true,
+    "mart_table_names_column_names_types_and_order_unchanged": true,
+    "mart_row_counts_unchanged": true,
+    "schema_future_and_object_grants_match_pre_cutover_snapshot": true,
+    "reader_schema_usage_preserved": true,
+    "reader_select_table_grants_preserved": 8,
+    "reader_future_table_and_view_select_preserved": true,
+    "user_role_assignments_and_saved_credentials_changed": false
+  },
+  "active_mart_row_counts": {
+    "DIM_DATE": 502,
+    "DIM_SECURITY": 6543,
+    "DIM_SECURITY_HISTORY": 8550,
+    "DIM_SECTOR": 71,
+    "FCT_SECURITY_DAILY_MOMENTUM": 2567657,
+    "FCT_SECURITY_CURRENT_SNAPSHOT": 5159,
+    "FCT_MARKET_DAILY_BREADTH": 502,
+    "FCT_SECTOR_DAILY_BREADTH": 35141
+  },
+  "applied_reporting_flag_changes_versus_retained_pre_fix_backup": {
+    "bullish_crossover": 236,
+    "golden_cross": 4,
+    "death_cross": 3
+  },
+  "completeness": {
+    "source_exchange_sessions": 754,
+    "reporting_exchange_sessions": 502,
+    "missing_source_dates_quarterly_snapshots_or_price_refreshes": 0,
+    "every_fact_row_has_scd_history_coverage": true,
+    "raw_price_rows_unchanged": 8270826
+  },
+  "retained_pre_fix_schemas": [
+    "MARKET.BACKUP_STAGING_SMA_FIX_20261007",
+    "MARKET.BACKUP_INTERMEDIATE_SMA_FIX_20261007",
+    "MARKET.BACKUP_MART_STAGING_SMA_FIX_20261007",
+    "MARKET.BACKUP_MARTS_SMA_FIX_20261007"
+  ],
+  "previous_reference_migration_backups_preserved": true,
+  "raw_data_or_s3_modified": false,
+  "new_api_requests_made": false,
+  "git_commit_or_push_performed": false,
+  "ingestion_restarted_or_dag_unpaused": false,
+  "hosted_dashboard_code_deployed_or_cache_reset": false,
+  "remaining_access_check": "Hosted reader role and read-only MARKET access subsequently verified; the earlier local override failure involved a different user. Optional backup/PUBLIC privilege hardening is recorded in hosted-dashboard-access-results.json",
+  "subsequent_hosted_dashboard_deployment": "hosted-dashboard-deployment-results.json; dashboard-only commit deployed and Community Cloud reboot completed"
+}

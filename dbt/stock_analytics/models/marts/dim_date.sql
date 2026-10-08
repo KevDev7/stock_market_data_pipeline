@@ -3,7 +3,9 @@
 
 WITH dates AS (
     SELECT DISTINCT trade_date
-    FROM {{ ref('prep_security_daily_momentum') }}
+    FROM {{ ref('calc_security_daily_momentum') }}
+    WHERE trade_date BETWEEN TO_DATE('{{ var("analysis_start", "2024-01-01") }}')
+                         AND TO_DATE('{{ var("analysis_end", "2025-12-31") }}')
 )
 
 SELECT

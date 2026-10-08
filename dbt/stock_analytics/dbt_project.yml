@@ -24,6 +24,7 @@ clean-targets:
 # Seed Configuration
 seeds:
   stock_analytics:
+    +enabled: false
     +schema: SEEDS
     +quote_columns: false
     russell3000_2024_1231:
@@ -56,12 +57,15 @@ models:
     staging:
       +schema: STAGING
       +materialized: view
+      stg_russell3000__constituents:
+        +enabled: false
     intermediate:
       +schema: INTERMEDIATE
       +materialized: table
-    mart_staging:
-      +schema: MART_STAGING
-      +materialized: table
+      int_russell3000__membership:
+        +enabled: false
+      int_russell3000__daily:
+        +enabled: false
     marts:
       +schema: MARTS
       +materialized: table

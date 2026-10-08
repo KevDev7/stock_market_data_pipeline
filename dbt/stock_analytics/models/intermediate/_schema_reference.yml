@@ -1,0 +1,34 @@
+version: 2
+models:
+  - name: int_market__reference_daily
+    description: Daily provider-CS eligibility and identity, enriched with the latest issuer observation on or before each date. SIC labels are industry groups, not GICS. Missing classification remains Unknown.
+    columns:
+      - name: security_key
+        tests: [not_null]
+      - name: sector
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [ticker, trade_date]
+  - name: int_market__daily
+    description: Accepted priced security-days, including 252-session warmup. Identity uses provider FIGI or documented issuer/ticker fallback. Duplicate priced aliases must fail, not double-count.
+    columns:
+      - name: security_key
+        tests: [not_null]
+      - name: trade_date
+        tests: [not_null]
+      - name: is_valid_record
+        tests:
+          - accepted_values:
+              values: [1]
+              quote: false
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [security_key, trade_date]
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [ticker, trade_date]
+  - name: int_market__security_history
+    description: Compressed observed attribute history of priced securities. Validity does not assert continuous listing or strict as-known-at-the-time metadata.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [security_key, valid_from]
