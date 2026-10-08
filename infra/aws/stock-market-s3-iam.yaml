@@ -8,6 +8,9 @@ Parameters:
   RawPrefix:
     Type: String
     Default: raw/polygon/grouped-daily
+  ReferencePrefix:
+    Type: String
+    Default: raw/massive/reference
   SnowflakePrincipalArn:
     Type: String
     Default: arn:aws:iam::819481466467:user/23q51000-s
@@ -35,11 +38,15 @@ Resources:
                     s3:prefix:
                       - !Ref RawPrefix
                       - !Sub "${RawPrefix}/*"
+                      - !Ref ReferencePrefix
+                      - !Sub "${ReferencePrefix}/*"
               - Effect: Allow
                 Action:
                   - s3:GetObject
                   - s3:PutObject
-                Resource: !Sub arn:${AWS::Partition}:s3:::${BucketName}/${RawPrefix}/*
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::${BucketName}/${RawPrefix}/*
+                  - !Sub arn:${AWS::Partition}:s3:::${BucketName}/${ReferencePrefix}/*
       Tags:
         - Key: Project
           Value: stock-market-data-pipeline
@@ -74,11 +81,15 @@ Resources:
                     s3:prefix:
                       - !Ref RawPrefix
                       - !Sub "${RawPrefix}/*"
+                      - !Ref ReferencePrefix
+                      - !Sub "${ReferencePrefix}/*"
               - Effect: Allow
                 Action:
                   - s3:GetObject
                   - s3:GetObjectVersion
-                Resource: !Sub arn:${AWS::Partition}:s3:::${BucketName}/${RawPrefix}/*
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::${BucketName}/${RawPrefix}/*
+                  - !Sub arn:${AWS::Partition}:s3:::${BucketName}/${ReferencePrefix}/*
       Tags:
         - Key: Project
           Value: stock-market-data-pipeline

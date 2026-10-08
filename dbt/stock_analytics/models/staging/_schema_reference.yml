@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: stg_market__catalog
+    description: Parsed daily ticker catalogs, one row per ticker/date. No derived identity, industry grouping, or eligibility business filter.
+    columns:
+      - name: ticker
+        tests: [not_null]
+      - name: trade_date
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [ticker, trade_date]
+  - name: stg_market__issuer_observations
+    description: Parsed dated issuer overviews; missing SIC is retained without inventing a classification.
+    columns:
+      - name: observation_date
+        tests: [not_null]

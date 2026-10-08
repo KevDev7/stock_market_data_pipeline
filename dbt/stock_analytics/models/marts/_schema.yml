@@ -31,10 +31,10 @@ models:
 
   - name: dim_security
     description: |
-      Conformed security dimension at one row per ticker.
+      Conformed security dimension at one row per security identity.
 
       Contains descriptive attributes such as company, sector, exchange,
-      currency, and index coverage dates. Facts join to this dimension by
+      currency, and observed price coverage dates. Facts join to this dimension by
       security_key.
     columns:
       - name: security_key
@@ -50,35 +50,35 @@ models:
               to: ref('dim_sector')
               field: sector_key
       - name: ticker
-        description: "Stock ticker symbol."
+        description: "Observed ticker; the symbol can be reused across distinct identities."
         tests:
           - not_null
-          - unique
       - name: company
-        description: "Company name from Russell 3000 constituent data."
+        description: "Company name from Massive dated reference data."
       - name: sector_name
         description: "Current sector name."
       - name: exchange
-        description: "Primary exchange from Russell 3000 constituent data."
+        description: "Primary exchange from Massive dated reference data."
       - name: currency
-        description: "Security currency from Russell 3000 constituent data."
+        description: "Security currency from Massive dated reference data."
 
   - name: dim_security_history
     description: |
-      Type 2 security history dimension built from Russell 3000 constituent
+      Type 2 security history dimension built from Massive dated reference
       snapshots.
 
-      Grain: one row per ticker per validity period. This preserves
-      point-in-time security attributes such as company, sector, exchange,
-      currency, and index weight.
+      Grain: one row per security identity per validity period. This preserves
+      dated observed security attributes such as company, SIC industry group,
+      exchange, and currency. Quarterly issuer observations are not strict
+      as-known-then history; index weights are NULL for this non-index universe.
     columns:
       - name: security_history_key
-        description: "Hash key for the ticker/version row."
+        description: "Hash key for the security identity/version row."
         tests:
           - not_null
           - unique
       - name: security_key
-        description: "Stable hash key for the ticker across versions."
+        description: "Identity hash; FIGI preferred with an issuer/ticker fallback."
         tests:
           - not_null
       - name: ticker
@@ -106,7 +106,7 @@ models:
           - not_null
     tests:
       - unique:
-          column_name: "ticker || '-' || TO_VARCHAR(valid_from) || '-' || TO_VARCHAR(valid_to)"
+          column_name: "security_key || '-' || TO_VARCHAR(valid_from) || '-' || TO_VARCHAR(valid_to)"
 
   - name: fct_security_daily_momentum
     description: |
@@ -136,6 +136,12 @@ models:
       - name: trade_date
         tests:
           - not_null
+      - name: is_first_observation
+        description: "1 for the ticker's first accepted observation, not necessarily an index-entry event."
+        tests:
+          - accepted_values:
+              values: [0, 1]
+              quote: false
       - name: volume
         tests:
           - dbt_utils.accepted_range:
@@ -165,16 +171,15 @@ models:
               inclusive: true
               where: "rsi IS NOT NULL"
     tests:
-      - unique:
-          column_name: "security_key || '-' || TO_VARCHAR(date_key)"
-          config:
-            where: "trade_date >= DATEADD(day, -7, CURRENT_DATE())"
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [security_key, date_key]
       - dbt_expectations.expect_table_row_count_to_equal_other_table:
-          compare_model: ref('prep_security_daily_momentum')
+          compare_model: ref('calc_security_daily_momentum')
+          compare_row_condition: "trade_date BETWEEN '{{ var('analysis_start', '2024-01-01') }}'::DATE AND '{{ var('analysis_end', '2025-12-31') }}'::DATE"
 
   - name: fct_market_daily_breadth
     description: |
-      Market-day aggregate fact table for Russell 3000 breadth and market
+      Market-day aggregate fact table for provider-classified common-stock breadth and market
       health measures.
 
       Grain: one row per date_key.
@@ -288,5 +293,4 @@ models:
               inclusive: true
     tests:
       - dbt_expectations.expect_table_row_count_to_be_between:
-          min_value: 2000
-          max_value: 3000
+          min_value: 1

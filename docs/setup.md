@@ -82,17 +82,24 @@ From a configured local environment or an Airflow container:
 ```bash
 cd dbt/stock_analytics
 dbt deps
-dbt seed --profiles-dir .
 dbt parse --profiles-dir .
 ```
 
-`dbt seed` loads the Russell 3000 constituent CSV snapshots into `SEEDS`.
+Legacy Russell CSV seeds are disabled and retained only for provenance. Ingest
+dated Massive reference data with `python -m scripts.backfill_reference` from
+the repository root; see the operations guide for validation and cutover.
 
 ## Streamlit
 
 The hosted dashboard is available at:
 
 <https://russell3000-market-intelligence.streamlit.app/>
+
+The existing Community Cloud deployment follows
+`codex/warehouse-marts-scd2`, with `data-viz/streamlit_app.py` as its entrypoint.
+Pushing to `main` alone does not update this app. Publish verified dashboard
+changes to its configured deployment branch; use Community Cloud's Reboot action
+if the running app has not picked up the commit. Do not commit dashboard secrets.
 
 For local use, create `data-viz/.streamlit/secrets.toml`:
 

@@ -1,4 +1,4 @@
--- Combines Russell 3000 seed files into a unified constituents table with validity ranges.
+-- Standardizes and deduplicates source snapshots; membership windows belong to INTERMEDIATE.
 {{ config(
     materialized = 'view'
 ) }}
@@ -16,8 +16,7 @@ WITH russell_snapshots AS (
         Market_Currency AS market_currency,
         TRY_TO_DOUBLE(REPLACE(Market_Value, ',', '')) AS market_value,
         TRY_TO_DOUBLE(REPLACE(Weight, ',', ''))       AS market_weight,
-        TO_DATE('2023-01-01') AS valid_from,
-        TO_DATE('2025-06-29') AS valid_to
+        TO_DATE('2024-12-31') AS snapshot_date
     FROM {{ ref('russell3000_2024_1231') }}
 
     UNION ALL
@@ -33,8 +32,7 @@ WITH russell_snapshots AS (
         Market_Currency AS market_currency,
         TRY_TO_DOUBLE(REPLACE(Market_Value, ',', '')) AS market_value,
         TRY_TO_DOUBLE(REPLACE(Weight, ',', ''))       AS market_weight,
-        TO_DATE('2025-06-30') AS valid_from,
-        TO_DATE('2025-08-28') AS valid_to
+        TO_DATE('2025-06-30') AS snapshot_date
     FROM {{ ref('russell3000_2025_0630') }}
 
     UNION ALL
@@ -50,8 +48,7 @@ WITH russell_snapshots AS (
         Market_Currency AS market_currency,
         TRY_TO_DOUBLE(REPLACE(Market_Value, ',', '')) AS market_value,
         TRY_TO_DOUBLE(REPLACE(Weight, ',', ''))       AS market_weight,
-        TO_DATE('2025-08-29') AS valid_from,
-        TO_DATE('2025-09-15') AS valid_to
+        TO_DATE('2025-08-29') AS snapshot_date
     FROM {{ ref('russell3000_2025_0829') }}
 
     UNION ALL
@@ -67,12 +64,25 @@ WITH russell_snapshots AS (
         Market_Currency AS market_currency,
         TRY_TO_DOUBLE(REPLACE(Market_Value, ',', '')) AS market_value,
         TRY_TO_DOUBLE(REPLACE(Weight, ',', ''))       AS market_weight,
-        TO_DATE('2025-09-16') AS valid_from,
-        TO_DATE('3000-01-01') AS valid_to
+        TO_DATE('2025-09-16') AS snapshot_date
     FROM {{ ref('russell3000_2025_0916') }}
 )
 
 SELECT 
-    *,
-    CURRENT_TIMESTAMP()::TIMESTAMP_NTZ AS ingested_at
+    *
 FROM russell_snapshots
+-- Preserve the history dimension's existing highest-market-value preference,
+-- but apply it once for every downstream consumer of the snapshot.
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY ticker, snapshot_date
+    ORDER BY
+        market_value DESC NULLS LAST,
+        company ASC NULLS LAST,
+        sector ASC NULLS LAST,
+        asset_class ASC NULLS LAST,
+        location ASC NULLS LAST,
+        exchange ASC NULLS LAST,
+        currency ASC NULLS LAST,
+        market_currency ASC NULLS LAST,
+        market_weight DESC NULLS LAST
+) = 1

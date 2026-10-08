@@ -2,6 +2,8 @@
 
 {{ config(
     materialized = 'incremental',
+    incremental_strategy = 'replace_recent',
+    tmp_relation_type = 'table',
     unique_key = ['ticker', 'trade_date'],
     on_schema_change = 'fail'
 ) }}
@@ -9,26 +11,28 @@
 WITH russell_3000 AS (
     -- Time-aware dimension: defines when a ticker is considered part of the Russell 3000
     SELECT *
-    FROM {{ ref('stg_russell3000__constituents') }}
+    FROM {{ ref('int_russell3000__membership') }}
 ),
 
 full_market AS (
     -- Daily market fact data at ticker × trade_date grain
-    SELECT DISTINCT *  -- DISTINCT used defensively to guard against upstream duplication
+    SELECT *
     FROM {{ ref('stg_daily_stocks') }}
+    -- Define the accepted analytical population before LAG or rolling measures.
+    -- Rejected records remain available in STAGING and RAW for inspection.
+    WHERE ticker IS NOT NULL
+      AND is_valid_record = 1
+      AND has_volume = 1
     {% if is_incremental() %}
         -- On incremental runs, only reprocess recent days
         -- Handles late data, corrections, and retries
-        WHERE trade_date >= (
-            SELECT DATEADD(day, -4, MAX(trade_date))
-            FROM {{ this }}
-        )
+        AND trade_date >= {{ recent_rebuild_start(this) }}
     {% endif %}
 ),
 
 joined AS (
     -- Enrich daily prices with Russell 3000 attributes
-    -- Join is point-in-time correct using valid_from / valid_to
+    -- Use the shared snapshot-derived windows, including the documented backcast.
     SELECT 
         f.ticker,
         f.trade_date,
@@ -67,24 +71,21 @@ slice_ordered AS (
 ),
 
 {% if is_incremental() %}
--- Pull the latest historical row before each ticker's rebuilt slice.
--- This preserves prior close and ticker state when only recent rows are rebuilt.
+-- Carry state only from the untouched prefix, not from old rows inside the
+-- replacement window that may now be rejected or absent.
 previous_state AS (
     SELECT
         s.ticker,
         p.close AS prev_close,
         p.trade_date AS prev_trade_date,
-        p.consecutive_trading_days AS prev_consecutive_trading_days
+        p.observation_count AS prev_observation_count
     FROM (
-        SELECT
-            ticker,
-            MIN(trade_date) AS slice_start_date
+        SELECT DISTINCT ticker
         FROM slice_ordered
-        GROUP BY ticker
     ) AS s
     LEFT JOIN {{ this }} AS p
         ON s.ticker = p.ticker
-       AND p.trade_date < s.slice_start_date
+       AND p.trade_date < {{ recent_rebuild_start(this) }}
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY s.ticker
         ORDER BY p.trade_date DESC NULLS LAST
@@ -119,10 +120,10 @@ final AS (
         CAST(
             j.slice_position
             {% if is_incremental() %}
-            + COALESCE(p.prev_consecutive_trading_days, 0)
+            + COALESCE(p.prev_observation_count, 0)
             {% endif %}
             AS NUMBER(38, 0)
-        ) AS consecutive_trading_days,
+        ) AS observation_count,
 
         {% if is_incremental() %}
         -- Get yesterday's close:
@@ -156,7 +157,7 @@ final AS (
                 {% endif %}
             THEN 1 
             ELSE 0 
-        END AS is_new_to_index
+        END AS is_first_observation
 
     FROM slice_ordered AS j
 

@@ -1,0 +1,58 @@
+{
+  "checked_on": "2026-10-07",
+  "status": "hosted_reader_access_verified_optional_hardening_identified",
+  "scope": "Hosted configuration, service-user roles, project-data grants, inherited PUBLIC roles, and recent query history; no credential or grant changes",
+  "hosted_configuration": {
+    "user": "STREAMLIT_DASHBOARD_USER",
+    "role": "STREAMLIT_DASHBOARD_ROLE",
+    "warehouse": "STREAMLIT_DASHBOARD_WH",
+    "database": "MARKET",
+    "schema": "MARTS",
+    "mart_schema": "MARTS"
+  },
+  "service_user": {
+    "type": "SERVICE",
+    "disabled": false,
+    "default_role": "STREAMLIT_DASHBOARD_ROLE",
+    "directly_granted_roles": ["STREAMLIT_DASHBOARD_ROLE"],
+    "default_secondary_roles": ["ALL"],
+    "administrative_roles_granted": false
+  },
+  "recent_hosted_queries": {
+    "lookback_hours": 3,
+    "result_limit": 1000,
+    "queries_returned": 27,
+    "role": "STREAMLIT_DASHBOARD_ROLE",
+    "warehouse": "STREAMLIT_DASHBOARD_WH",
+    "query_types": ["SELECT"],
+    "all_succeeded": true,
+    "first_query_utc": "2026-10-07T12:06:24.676Z",
+    "last_query_utc": "2026-10-07T12:13:04.747Z"
+  },
+  "project_data_permissions": {
+    "database_usage": "MARKET",
+    "warehouse_usage": "STREAMLIT_DASHBOARD_WH",
+    "active_marts_schema_usage": true,
+    "active_mart_table_select_grants": 8,
+    "active_mart_future_grants": ["SELECT ON TABLES", "SELECT ON VIEWS"],
+    "write_create_ownership_manage_grants_or_grant_option_found": false,
+    "raw_staging_intermediate_or_mart_staging_access_found": false,
+    "role_and_public_inheritance_nodes_checked": 23,
+    "public_inherited_market_grants_found": false,
+    "public_future_grants_count": 0
+  },
+  "optional_hardening": {
+    "strict_minimum_privileges_not_claimed": true,
+    "backup_mart_schema_usage_and_select_retained": ["MARKET.BACKUP_MARTS_20261007", "MARKET.BACKUP_MARTS_SMA_FIX_20261007"],
+    "backup_mart_table_select_grants": 16,
+    "backup_mart_future_select_grants_retained": true,
+    "public_inherited_account_capabilities": ["BIND SERVICE ENDPOINT", "EXECUTE AGENT TASK", "MANAGE ARTIFACT PUBLICATION", "USE AI FUNCTIONS", "VIEW LINEAGE"],
+    "public_also_inherits_sample_data_and_snowflake_ai_compute_application_roles": true,
+    "note": "These are broader than the dashboard needs, but do not grant writes to MARKET. Changes to PUBLIC would affect other users and require a separately scoped hardening decision."
+  },
+  "local_reader_override_failure": "Historical local test used a different administrative user that lacks the reader role; it does not indicate a hosted access failure",
+  "credentials_role_assignments_or_permissions_modified": false,
+  "warehouse_data_modified": false,
+  "ingestion_resumed": false,
+  "git_commit_or_push_performed_during_access_check": false
+}

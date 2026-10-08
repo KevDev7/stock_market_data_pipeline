@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import uuid
+from pathlib import Path
 
 import pendulum
 from snowflake.connector import connect
@@ -25,6 +26,11 @@ class SnowflakeClient:
     def _connect(self):
         """Establish a secure RSA-based connection to Snowflake."""
         private_key_path = SNOWFLAKE.get("private_key_path")
+        if private_key_path and not os.path.exists(private_key_path):
+            # Docker's mounted path differs locally; use only its exact basename.
+            local_key = Path(__file__).resolve().parents[1] / "keys" / Path(private_key_path).name
+            if local_key.is_file():
+                private_key_path = str(local_key)
 
         if private_key_path and os.path.exists(private_key_path):
             import snowflake.connector

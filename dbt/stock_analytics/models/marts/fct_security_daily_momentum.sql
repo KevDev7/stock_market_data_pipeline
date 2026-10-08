@@ -1,13 +1,15 @@
 -- Security-day fact table with trading and technical momentum measures.
 {{ config(
     materialized = 'incremental',
+    incremental_strategy = 'replace_recent',
+    tmp_relation_type = 'table',
     unique_key = ['security_key', 'date_key'],
     cluster_by = ['security_key'],
     on_schema_change = 'fail'
 ) }}
 
 SELECT
-    MD5(ticker) AS security_key,
+    security_key,
     MD5(COALESCE(sector, 'Unknown')) AS sector_key,
     TO_NUMBER(TO_CHAR(trade_date, 'YYYYMMDD')) AS date_key,
     trade_date,
@@ -19,7 +21,7 @@ SELECT
     high,
     low,
     index_weight,
-    is_new_to_index,
+    is_first_observation,
 
     sma_20,
     sma_50,
@@ -33,10 +35,9 @@ SELECT
     death_cross,
     rel_vol,
     rsi
-FROM {{ ref('prep_security_daily_momentum') }}
+FROM {{ ref('calc_security_daily_momentum') }}
+WHERE trade_date BETWEEN TO_DATE('{{ var("analysis_start", "2024-01-01") }}')
+                         AND TO_DATE('{{ var("analysis_end", "2025-12-31") }}')
 {% if is_incremental() %}
-WHERE trade_date >= (
-    SELECT COALESCE(DATEADD(day, -4, MAX(trade_date)), TO_DATE('1900-01-01'))
-    FROM {{ this }}
-)
+AND trade_date >= {{ recent_rebuild_start(this) }}
 {% endif %}
