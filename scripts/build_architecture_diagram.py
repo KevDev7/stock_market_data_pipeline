@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WIDTH, HEIGHT = 2500, 1160
+WIDTH, HEIGHT = 2060, 1035
 INK = "#252525"
 BLUE = "#dcecff"
 BLUE_EDGE = "#7399bf"
@@ -230,28 +230,28 @@ def build_diagram():
     # Operational manifests/checkpoints remain implemented but are omitted here.
     d.box("source-zone", 150, 228, 205, 430, kind="container", fill="#ffffff", stroke=PALE_BORDER, dashed=True)
     d.box("ingest-zone", 400, 228, 265, 430, kind="container", fill="#ffffff", stroke=PALE_BORDER, dashed=True)
-    d.box("warehouse", 706, 182, 1276, 830, kind="container", fill="#ffffff", stroke="#777777", dashed=True)
-    d.box("consumer-zone", 2030, 228, 270, 365, kind="container", fill="#ffffff", stroke=PALE_BORDER, dashed=True)
+    d.box("warehouse", 706, 182, 1006, 718, kind="container", fill="#ffffff", stroke="#777777", dashed=True)
+    d.box("consumer-zone", 1760, 228, 270, 365, kind="container", fill="#ffffff", stroke=PALE_BORDER, dashed=True)
     layers = [
-        ("RAW", 740, 210, "#fcebd6", "#bf914b", "table"),
-        ("STAGING", 980, 210, "#f4f4f4", "#888888", "view"),
-        ("INTERMEDIATE", 1220, 210, "#e4eef5", "#7f9eb5", "table"),
-        ("MARTS", 1460, 480, "#fff4cc", "#b8a051", "table"),
+        ("RAW", 740, 210, "#fcebd6", "#bf914b"),
+        ("STAGING", 980, 210, "#f4f4f4", "#888888"),
+        ("INTERMEDIATE", 1220, 210, "#e4eef5", "#7f9eb5"),
+        ("MARTS", 1460, 210, "#fff4cc", "#b8a051"),
     ]
-    for name, x, width, fill, stroke, icon in layers:
+    for name, x, width, fill, stroke in layers:
         d.box(f"layer-{name}", x, 250, width, 340, kind="container")
-        d.box(f"header-{name}", x, 250, width, 46, [name], fill=fill, stroke=stroke, font=18, icon=icon)
+        d.box(f"header-{name}", x, 250, width, 46, [name], fill=fill, stroke=stroke, font=18)
         access = "Access" if name == "MARTS" else "No Access"
         d.box(f"usage-{name}", x, 218, width, 26, [access], kind="text", font=16)
 
     d.box("input-contract", 150, 35, 800, 72, ["DATA CONTRACT", "Sources → My Platform"], font=19)
-    d.box("output-contract", 980, 35, 1320, 72, ["DATA CONTRACT", "My Platform → Consumers"], font=19)
+    d.box("output-contract", 980, 35, 1050, 72, ["DATA CONTRACT", "My Platform → Consumers"], font=19)
     d.box("source-header", 150, 172, 205, 44, ["Source Layer"], fill=BLUE, stroke=BLUE_EDGE)
     d.box("ingest-header", 400, 172, 265, 44, ["Ingest"], fill="#f7f7f7", stroke="#777777")
-    d.box("consumer-header", 2030, 172, 270, 44, ["Consumers"], fill=BLUE, stroke=BLUE_EDGE)
+    d.box("consumer-header", 1760, 172, 270, 44, ["Consumers"], fill=BLUE, stroke=BLUE_EDGE)
     d.box("snowflake-symbol", 710, 145, 42, 42, kind="icon", icon="snowflake", icon_color="#29a5dc")
     d.box("cloud-symbol", 767, 145, 45, 42, kind="icon", icon="cloud", icon_color="#3986b2")
-    d.box("warehouse-title", 940, 181, 900, 29, ["Data Warehouse"], kind="text", font=20)
+    d.box("warehouse-title", 740, 181, 940, 29, ["Data Warehouse"], kind="text", font=20)
     d.box("batch-label", 20, 365, 110, 80, ["Batch", "Sources"], kind="document", fill=BLUE, stroke=BLUE_EDGE)
 
     d.box("massive-provider", 164, 254, 177, 386, kind="container")
@@ -277,7 +277,12 @@ def build_diagram():
     d.box("security-reference", 1236, 328, 178, 50, ["Security Reference"], fill=DATA, stroke="#93a9c0", font=17)
     d.box("price-history", 1236, 464, 178, 50, ["Price History"], fill=DATA, stroke="#93a9c0", font=17)
     d.box("observed-history", 1236, 540, 178, 40, ["Security History"], fill=DATA, stroke="#93a9c0", font=17)
-    d.box("analytics-product", 1500, 355, 400, 225, ["Data Product", "Star Schema +", "Fact Constellation", "Stock Market Analytics"], fill=DATA, stroke="#93a9c0", font=17)
+    product_lines = ["Data Product", "Star Schema +", "Fact Constellation", "Stock Market", "Analytics"]
+    # Match the single-line dataset padding; add only the extra text lines.
+    product_height = 50 + (len(product_lines) - 1) * 17 * 1.2
+    product = d.box("analytics-product", 1476, 467.5 - product_height / 2,
+                    178, product_height, product_lines,
+                    fill=DATA, stroke="#93a9c0", font=17)
 
     policies = {
         "RAW": ["1:1 Copy", "No Transformations", "No Dimensional Modeling", "Tables", "Partial Overwrite"],
@@ -286,15 +291,14 @@ def build_diagram():
         "MARTS": ["Analytical Calculations", "Dimensional Modeling", "Tables", "No Cleanup", "Full/Partial Overwrite"],
     }
     for name, x, width, *_ in layers:
-        d.box(f"policy-title-{name}", x, 704, width, 28, ["Layer policies"], kind="text", font=18, bold=True, underline=True)
+        d.box(f"policy-title-{name}", x, 614, width, 28, ["Rules"], kind="text", font=18, bold=True, underline=True)
         lines = policies[name]
         line_height = 22
         # Individual text rows keep both SVG and diagrams.net easy to edit.
         for i, line in enumerate(lines):
-            d.box(f"policy-{name}-{i}", x-5, 740+i*line_height, width+10, 22, [line], kind="text", font=16)
+            d.box(f"policy-{name}-{i}", x-5, 650+i*line_height, width+10, 22, [line], kind="text", font=16)
 
-    d.box("stock-dashboard", 2038, 392, 254, 86, ["Stock Market Dashboard", "BI Project"], font=17, icon="chart", icon_right=True, icon_color="#ce5353")
-    d.box("bi-label", 2340, 397, 137, 81, ["BI / Analytics", "Projects"], kind="document", fill=BLUE, stroke=BLUE_EDGE, font=17)
+    d.box("stock-dashboard", 1768, 392, 254, 86, ["Stock Market Dashboard", "BI Project"], font=17, icon="chart", icon_right=True, icon_color="#ce5353")
 
     # Three source datasets converge on one extractor; no source-to-COPY bypass.
     d.edge("price-pull", [(329, 364), (380, 364), (380, 340), (417, 340)], "source-prices", "extract-job", "Pull", (381, 324))
@@ -311,22 +315,22 @@ def build_diagram():
     d.edge("overview-reference", [(1174, 419), (1198, 419), (1198, 364), (1236, 364)], "stg-overview", "security-reference")
     d.edge("stock-enrichment", [(1174, 489), (1236, 489)], "stg-stock", "price-history")
     d.edge("reference-enrichment", [(1325, 378), (1325, 464)], "security-reference", "price-history")
-    d.edge("analytical-modeling", [(1414, 489), (1500, 489)], "price-history", "analytics-product")
+    d.edge("analytical-modeling", [(1414, 489), (1476, 489)], "price-history", "analytics-product")
     d.edge("reference-attribute-history", [(1414, 353), (1422, 353), (1422, 550), (1414, 550)], "security-reference", "observed-history", jump=True)
     d.edge("accepted-history", [(1325, 514), (1325, 540)], "price-history", "observed-history")
     # MARTS owns calculations and dimensional publication; helper models are internal.
-    d.edge("shared-attribute-history", [(1414, 570), (1450, 570), (1450, 610), (1544, 610), (1544, 580)], "observed-history", "analytics-product")
-    d.edge("product-consumption", [(1900, 467.5), (1998, 467.5), (1998, 435), (2038, 435)], "analytics-product", "stock-dashboard")
+    d.edge("shared-attribute-history", [(1414, 570), (1544, 570), (1544, product.y + product.h)], "observed-history", "analytics-product")
+    d.edge("product-consumption", [(1654, 467.5), (1728, 467.5), (1728, 435), (1768, 435)], "analytics-product", "stock-dashboard")
 
     capabilities = [
-        "Metadata & lineage · dbt model descriptions and dependency graph",
-        "Data quality · dbt key, relationship, price-history and analytical tests",
-        "Pipeline orchestration · Apache Airflow coordinates Python and dbt runs",
+        "Metadata & Lineage · dbt",
+        "Data Quality · dbt Tests",
+        "Pipeline Orchestration · Airflow",
     ]
     for i, line in enumerate(capabilities):
-        d.box(f"capability-{i}", 780, 958+i*30, 1118, 30, [line], font=17)
-    d.box("source-orientation", 150, 1083, 1058, 40, ["SOURCE SYSTEM ORIENTED"], kind="right-arrow", fill=BLUE, stroke=BLUE_EDGE, font=17)
-    d.box("business-orientation", 1220, 1083, 1080, 40, ["BUSINESS ORIENTED"], kind="left-arrow", fill="#f8dfe0", stroke="#be7478", font=17)
+        d.box(f"capability-{i}", 780, 846+i*30, 848, 30, [line], font=17)
+    d.box("source-orientation", 150, 958, 1058, 40, ["SOURCE SYSTEM ORIENTED"], kind="right-arrow", fill=BLUE, stroke=BLUE_EDGE, font=17)
+    d.box("business-orientation", 1220, 958, 810, 40, ["BUSINESS ORIENTED"], kind="left-arrow", fill="#f8dfe0", stroke="#be7478", font=17)
     return d
 
 

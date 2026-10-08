@@ -5,7 +5,7 @@ import re
 import unittest
 import xml.etree.ElementTree as ET
 
-from scripts.build_architecture_diagram import DATA, build_diagram
+from scripts.build_architecture_diagram import DATA, HEIGHT, build_diagram
 
 
 class ArchitectureDiagramTests(unittest.TestCase):
@@ -110,13 +110,57 @@ class ArchitectureDiagramTests(unittest.TestCase):
     def test_one_mart_product_with_singular_schema_label(self):
         product = self.boxes['analytics-product']
         self.assertEqual(product.lines, ('Data Product', 'Star Schema +',
-                                        'Fact Constellation', 'Stock Market Analytics'))
+                                        'Fact Constellation', 'Stock Market', 'Analytics'))
         for removed in ('fact-products', 'dimensions', 'security-history'):
             self.assertNotIn(removed, self.boxes)
         incoming = [edge for edge in self.diagram.edges if edge['target'] == product.id]
         self.assertEqual({edge['source'] for edge in incoming},
                          {'price-history', 'observed-history'})
         self.assertNotIn('layer-MART_STAGING', self.boxes)
+
+    def test_processing_layers_have_equal_widths(self):
+        for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS'):
+            self.assertEqual(self.boxes[f'layer-{layer}'].w, 210)
+            self.assertEqual(self.boxes[f'header-{layer}'].w, 210)
+        self.assertEqual(self.boxes['analytics-product'].w,
+                         self.boxes['raw-stock'].w)
+
+    def test_mart_product_matches_dataset_text_padding(self):
+        product = self.boxes['analytics-product']
+        single_line = self.boxes['raw-stock']
+        def text_padding(box):
+            return box.h - len(box.lines) * box.font * 1.2
+        self.assertAlmostEqual(text_padding(product), text_padding(single_line))
+        endpoint = self.edges['shared-attribute-history']['points'][-1]
+        self.assertAlmostEqual(endpoint[1], product.y + product.h)
+        self.assertTrue(product.x < endpoint[0] < product.x + product.w)
+
+    def test_layer_headers_are_centered_without_icons(self):
+        cells = {cell.get('id'): cell
+                 for cell in ET.fromstring(self.diagram.drawio()).findall('.//mxCell')}
+        for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS'):
+            header_id = f'header-{layer}'
+            self.assertFalse(self.boxes[header_id].icon)
+            self.assertNotIn(header_id + '-icon', cells)
+            style = cells[header_id].get('style')
+            self.assertIn('align=center;', style)
+            self.assertNotIn('spacingLeft=', style)
+            self.assertNotIn('spacingRight=', style)
+
+    def test_lower_sections_are_compact_without_overlap(self):
+        for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS'):
+            zone = self.boxes[f'layer-{layer}']
+            title = self.boxes[f'policy-title-{layer}']
+            self.assertEqual(title.y - (zone.y + zone.h), 24)
+        rules_bottom = max(box.y + box.h for box in self.diagram.boxes
+                           if box.id.startswith('policy-'))
+        self.assertEqual(self.boxes['capability-0'].y - rules_bottom, 20)
+        bands_bottom = self.boxes['capability-2'].y + self.boxes['capability-2'].h
+        for arrow_id in ('source-orientation', 'business-orientation'):
+            arrow = self.boxes[arrow_id]
+            self.assertEqual(arrow.y - bands_bottom, 22)
+            self.assertLess(arrow.y + arrow.h, HEIGHT)
+        self.assertLess(HEIGHT, 1160)
 
     def test_routes_do_not_cross_other_dataset_boxes(self):
         for edge in self.diagram.edges:
@@ -135,6 +179,11 @@ class ArchitectureDiagramTests(unittest.TestCase):
                     self.assertFalse(crosses, f"{edge['id']} crosses {box.id}")
 
     def test_simplified_labels_and_removed_annotations(self):
+        self.assertEqual([self.boxes[f'capability-{i}'].lines for i in range(3)], [
+            ('Metadata & Lineage · dbt',),
+            ('Data Quality · dbt Tests',),
+            ('Pipeline Orchestration · Airflow',),
+        ])
         self.assertEqual(self.boxes['policy-RAW-0'].lines, ('1:1 Copy',))
         self.assertEqual(self.boxes['warehouse-title'].lines, ('Data Warehouse',))
         self.assertEqual(self.boxes['input-contract'].lines,
@@ -142,7 +191,7 @@ class ArchitectureDiagramTests(unittest.TestCase):
         self.assertEqual(self.boxes['output-contract'].lines,
                          ('DATA CONTRACT', 'My Platform → Consumers'))
         for removed in ('seeds', 'admin', 'support-label', 'diagram-status',
-                        'seed-load', 'app-title', 'usage-note', 'membership-note'):
+                        'seed-load', 'app-title', 'usage-note', 'membership-note', 'bi-label'):
             self.assertNotIn(removed, self.boxes)
         self.assertEqual(self.boxes['schedule'].lines,
                          ('Daily Stock Prices +', 'Ticker Catalog:',
@@ -164,6 +213,7 @@ class ArchitectureDiagramTests(unittest.TestCase):
                       'No Cleanup', 'Full/Partial Overwrite'],
         }
         for layer, rules in expected.items():
+            self.assertEqual(self.boxes[f'policy-title-{layer}'].lines, ('Rules',))
             actual = [box.lines for box in self.diagram.boxes
                       if box.id.startswith(f'policy-{layer}-')]
             self.assertEqual(actual, [(rule,) for rule in rules])
@@ -195,7 +245,7 @@ class ArchitectureDiagramTests(unittest.TestCase):
         cells = {cell.get('id'): cell
                  for cell in ET.fromstring(self.diagram.drawio()).findall('.//mxCell')}
         for arrow_id, width in (('source-orientation', 1058),
-                                ('business-orientation', 1080)):
+                                ('business-orientation', 810)):
             cell = cells[arrow_id]
             style = dict(part.split('=', 1) for part in cell.get('style').split(';')
                          if '=' in part)
