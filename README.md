@@ -16,10 +16,10 @@ by a hosted Streamlit dashboard.
   <img src="assets/streamlit_app.png" width="100%" alt="Russell 3000 Market Intelligence dashboard">
 </p>
 
-## Architecture
+## Pipeline Architecture
 
 <p align="center">
-  <img src="assets/stock-market-architecture.png" width="100%" alt="Four-layer stock market architecture with source and ingestion zones, the Snowflake warehouse boundary, layer policies, and one Streamlit dashboard">
+  <img src="assets/stock-market-architecture.png" width="100%" alt="Stock market pipeline architecture: Massive API sources, S3 ingestion archive, four Snowflake processing layers, and one dashboard">
 </p>
 
 The diagram shows all four processing layers in the `MARKET` Snowflake database,
