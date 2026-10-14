@@ -287,17 +287,17 @@ def build_diagram():
     # Missing entries are whitespace, not additional or implied policy choices.
     policies = {
         "RAW": [(0, "No Transformations"), (1, "1:1 Copy"),
-                (6, "No Dimensional Modeling"), (7, "Tables"), (8, "Partial Overwrite")],
+                (6, "No Dimensional Modeling"), (7, "Tables"), (8, "Overwrite Only")],
         "STAGING": [(0, "Cleanup Transformations"), (1, "Rename"), (2, "Casting"),
                     (3, "Deduplication"), (4, "No Cross-Source Joins"),
                     (5, "No Enrichment"), (6, "No Dimensional Modeling"), (7, "Views")],
         "INTERMEDIATE": [(0, "No Cleanup"), (1, "Shared Business Rules"),
                          (4, "Cross-Source Joins"), (5, "Enrichment"),
                          (6, "No Dimensional Modeling"), (7, "Tables"),
-                         (8, "Full/Partial Overwrite")],
+                         (8, "Overwrite Only")],
         "MARTS": [(0, "No Cleanup"), (1, "Analytical Calculations"),
                   (6, "Dimensional Modeling"), (7, "Tables"),
-                  (8, "Full/Partial Overwrite")],
+                  (8, "Overwrite Only")],
     }
     for name, x, width, *_ in layers:
         d.box(f"policy-title-{name}", x, 614, width, 28, ["Rules"], kind="text", font=18, bold=True, underline=True)
