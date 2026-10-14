@@ -5,7 +5,7 @@ import re
 import unittest
 import xml.etree.ElementTree as ET
 
-from scripts.build_architecture_diagram import DATA, HEIGHT, build_diagram
+from scripts.build_architecture_diagram import DATA, HEIGHT, WIDTH, build_diagram
 
 
 class ArchitectureDiagramTests(unittest.TestCase):
@@ -22,6 +22,14 @@ class ArchitectureDiagramTests(unittest.TestCase):
         self.assertTrue(all(edge['target'] == 'extract-job' for edge in source_edges))
         self.assertEqual(sum(box.lines == ('REST API Extraction',)
                              for box in self.diagram.boxes), 1)
+
+    def test_removed_batch_category_does_not_leave_an_empty_column(self):
+        self.assertNotIn('batch-label', self.boxes)
+        self.assertEqual(self.boxes['source-zone'].x, 20)
+        self.assertEqual(min(box.x for box in self.diagram.boxes), 20)
+        self.assertEqual(WIDTH, 1930)
+        self.assertTrue(all(0 <= box.x and box.x + box.w <= WIDTH
+                            for box in self.diagram.boxes))
 
     def test_archive_and_copy_are_required_before_raw(self):
         outgoing = {}
@@ -140,6 +148,7 @@ class ArchitectureDiagramTests(unittest.TestCase):
                  for cell in ET.fromstring(self.diagram.drawio()).findall('.//mxCell')}
         for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS'):
             header_id = f'header-{layer}'
+            self.assertEqual(self.boxes[header_id].lines, (layer.capitalize(),))
             self.assertFalse(self.boxes[header_id].icon)
             self.assertNotIn(header_id + '-icon', cells)
             style = cells[header_id].get('style')
