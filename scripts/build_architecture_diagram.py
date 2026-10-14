@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WIDTH, HEIGHT = 2060, 1035
+WIDTH, HEIGHT = 1930, 1035
 INK = "#252525"
 BLUE = "#dcecff"
 BLUE_EDGE = "#7399bf"
@@ -240,7 +240,7 @@ def build_diagram():
     ]
     for name, x, width, fill, stroke in layers:
         d.box(f"layer-{name}", x, 250, width, 340, kind="container")
-        d.box(f"header-{name}", x, 250, width, 46, [name], fill=fill, stroke=stroke, font=18)
+        d.box(f"header-{name}", x, 250, width, 46, [name.capitalize()], fill=fill, stroke=stroke, font=18)
         access = "Access" if name == "MARTS" else "No Access"
         d.box(f"usage-{name}", x, 218, width, 26, [access], kind="text", font=16)
 
@@ -252,7 +252,6 @@ def build_diagram():
     d.box("snowflake-symbol", 710, 145, 42, 42, kind="icon", icon="snowflake", icon_color="#29a5dc")
     d.box("cloud-symbol", 767, 145, 45, 42, kind="icon", icon="cloud", icon_color="#3986b2")
     d.box("warehouse-title", 740, 181, 940, 29, ["Data Warehouse"], kind="text", font=20)
-    d.box("batch-label", 20, 365, 110, 80, ["Batch", "Sources"], kind="document", fill=BLUE, stroke=BLUE_EDGE)
 
     d.box("massive-provider", 164, 254, 177, 386, kind="container")
     d.box("massive-title", 164, 266, 177, 27, ["Massive"], kind="text", bold=True, font=18)
@@ -341,6 +340,14 @@ def build_diagram():
         d.box(f"capability-{i}", 780, 868+i*30, 848, 30, [line], font=17)
     d.box("source-orientation", 150, 980, 1058, 40, ["SOURCE SYSTEM ORIENTED"], kind="right-arrow", fill=BLUE, stroke=BLUE_EDGE, font=17)
     d.box("business-orientation", 1220, 980, 810, 40, ["BUSINESS ORIENTED"], kind="left-arrow", fill="#f8dfe0", stroke="#be7478", font=17)
+    # Trim the former category-label column without changing relative spacing.
+    for box in d.boxes:
+        box.x -= 130
+    for edge in d.edges:
+        edge["points"] = [(x - 130, y) for x, y in edge["points"]]
+        if edge["label_xy"] is not None:
+            x, y = edge["label_xy"]
+            edge["label_xy"] = (x - 130, y)
     return d
 
 
