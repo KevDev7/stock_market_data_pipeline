@@ -211,15 +211,15 @@ class ArchitectureDiagramTests(unittest.TestCase):
     def test_approved_layer_wide_rules(self):
         expected = {
             'RAW': ['1:1 Copy', 'No Transformations', 'No Dimensional Modeling',
-                    'Tables', 'Partial Overwrite'],
+                    'Tables', 'Overwrite Only'],
             'STAGING': ['Cleanup Transformations', 'Rename', 'Casting', 'Deduplication',
                         'No Cross-Source Joins', 'No Enrichment',
                         'No Dimensional Modeling', 'Views'],
             'INTERMEDIATE': ['Cross-Source Joins', 'Enrichment', 'Shared Business Rules',
                              'No Cleanup',
-                             'No Dimensional Modeling', 'Tables', 'Full/Partial Overwrite'],
+                             'No Dimensional Modeling', 'Tables', 'Overwrite Only'],
             'MARTS': ['Analytical Calculations', 'Dimensional Modeling', 'Tables',
-                      'No Cleanup', 'Full/Partial Overwrite'],
+                      'No Cleanup', 'Overwrite Only'],
         }
         for layer, rules in expected.items():
             self.assertEqual(self.boxes[f'policy-title-{layer}'].lines, ('Rules',))
@@ -243,8 +243,8 @@ class ArchitectureDiagramTests(unittest.TestCase):
              for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS')],
             [(layer, 'Views' if layer == 'STAGING' else 'Tables')
              for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS')],
-            [('RAW', 'Partial Overwrite'), ('INTERMEDIATE', 'Full/Partial Overwrite'),
-             ('MARTS', 'Full/Partial Overwrite')],
+            [('RAW', 'Overwrite Only'), ('INTERMEDIATE', 'Overwrite Only'),
+             ('MARTS', 'Overwrite Only')],
         ]
         rows = []
         for group in groups:

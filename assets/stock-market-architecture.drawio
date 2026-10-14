@@ -350,7 +350,7 @@
         <mxCell id="policy-RAW-3" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;" value="Tables" vertex="1">
           <mxGeometry height="22" width="220" x="605" y="804" as="geometry" />
         </mxCell>
-        <mxCell id="policy-RAW-4" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;" value="Partial Overwrite" vertex="1">
+        <mxCell id="policy-RAW-4" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;" value="Overwrite Only" vertex="1">
           <mxGeometry height="22" width="220" x="605" y="826" as="geometry" />
         </mxCell>
         <mxCell id="policy-title-STAGING" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontColor=#252525;strokeWidth=1.2;fontStyle=5;" value="Rules" vertex="1">
@@ -401,7 +401,7 @@
         <mxCell id="policy-INTERMEDIATE-5" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;" value="Tables" vertex="1">
           <mxGeometry height="22" width="220" x="1085" y="804" as="geometry" />
         </mxCell>
-        <mxCell id="policy-INTERMEDIATE-6" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;" value="Full/Partial Overwrite" vertex="1">
+        <mxCell id="policy-INTERMEDIATE-6" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;" value="Overwrite Only" vertex="1">
           <mxGeometry height="22" width="220" x="1085" y="826" as="geometry" />
         </mxCell>
         <mxCell id="policy-title-MARTS" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontColor=#252525;strokeWidth=1.2;fontStyle=5;" value="Rules" vertex="1">
@@ -419,7 +419,7 @@
         <mxCell id="policy-MARTS-3" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;" value="No Cleanup" vertex="1">
           <mxGeometry height="22" width="220" x="1325" y="650" as="geometry" />
         </mxCell>
-        <mxCell id="policy-MARTS-4" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;" value="Full/Partial Overwrite" vertex="1">
+        <mxCell id="policy-MARTS-4" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;" value="Overwrite Only" vertex="1">
           <mxGeometry height="22" width="220" x="1325" y="826" as="geometry" />
         </mxCell>
         <mxCell id="stock-dashboard" parent="1" style="shape=rectangle;fillColor=#ffffff;strokeColor=#252525;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=17;fontColor=#252525;strokeWidth=1.2;spacingRight=36;" value="Stock Market Dashboard&lt;br&gt;BI Project" vertex="1">
