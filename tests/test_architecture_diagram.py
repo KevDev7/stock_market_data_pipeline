@@ -270,6 +270,25 @@ class ArchitectureDiagramTests(unittest.TestCase):
             self.assertEqual(object_types,
                              [('Views',)] if layer == 'STAGING' else [('Tables',)])
 
+    def test_checked_in_drawio_rules_match_the_shared_visual_rows(self):
+        path = (Path(__file__).resolve().parents[1]
+                / 'assets/stock-market-architecture.drawio')
+        cells = ET.parse(path).findall('.//mxCell')
+        actual = {
+            (cell.get('id').split('-')[1], cell.get('value')):
+                float(cell.find('mxGeometry').get('y'))
+            for cell in cells
+            if cell.get('id', '').startswith('policy-')
+            and not cell.get('id', '').startswith('policy-title-')
+        }
+        expected = {
+            (box.id.split('-')[1], box.lines[0]): box.y
+            for box in self.diagram.boxes
+            if box.id.startswith('policy-')
+            and not box.id.startswith('policy-title-')
+        }
+        self.assertEqual(actual, expected)
+
     def test_every_layer_has_one_explicit_dimensional_modeling_policy(self):
         for layer in ('RAW', 'STAGING', 'INTERMEDIATE', 'MARTS'):
             modeling_rules = [box.lines for box in self.diagram.boxes
