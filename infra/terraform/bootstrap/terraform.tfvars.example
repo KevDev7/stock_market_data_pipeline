@@ -1,0 +1,5 @@
+aws_profile     = "existing-admin-profile"
+account_id      = "645968351825"
+region          = "us-east-1"
+state_bucket    = "stock-market-tfstate-645968351825-us-east-1"
+state_admin_arn = "arn:aws:iam::645968351825:role/REPLACE_WITH_EXISTING_ADMIN_ROLE"

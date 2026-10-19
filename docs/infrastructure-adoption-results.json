@@ -1,0 +1,187 @@
+{
+  "checked_on": "2026-10-19",
+  "status": "adoption_completed_including_dashboard_service_user",
+  "live_adoption_completed": true,
+  "state_backend_created": true,
+  "terraform_apply_or_persistent_import_run": true,
+  "pipeline_setup_ownership_changed": true,
+  "pipeline_loading_or_transformation_semantics_changed": false,
+  "versions": {
+    "terraform": "1.14.5",
+    "aws_provider": "6.69.1",
+    "snowflake_provider": "2.22.0"
+  },
+  "aws": {
+    "connected_and_default_identity": "arn:aws:iam::645968351825:user/nba-analytics-ingestion",
+    "account": "645968351825",
+    "administrator_profile": "synthea-cdc",
+    "administrator_identity": "arn:aws:iam::645968351825:user/synthea-cdc-developer",
+    "inventory_status": "completed_with_authorized_administrator",
+    "archive_bucket": "stock-market-data-pipeline-645968351825-us-east-1",
+    "observed_versioning": "Enabled",
+    "observed_encryption": "AES256",
+    "observed_bucket_key_enabled": true,
+    "observed_blocked_encryption_types": ["SSE-C"],
+    "observed_public_access_blocks": {
+      "BlockPublicAcls": true,
+      "IgnorePublicAcls": true,
+      "BlockPublicPolicy": true,
+      "RestrictPublicBuckets": true
+    },
+    "historical_default_profile_denials_resolved_by_using_authorized_profile": [
+      "iam:GetUser on stock-market-ingestion",
+      "iam:GetRole on snowflake-stock-market-raw-reader"
+    ],
+    "administrator_profile_identified": true,
+    "adoption_apply": {"imported": 8, "added": 0, "changed": 0, "destroyed": 0},
+    "final_plan": {"managed_resources": 8, "imports": 0, "resource_mutations": 0},
+    "state_access_and_locking_verified_live": true
+  },
+  "state_backend": {
+    "bucket": "stock-market-tfstate-645968351825-us-east-1",
+    "bootstrap_resources_created": 5,
+    "bootstrap_final_plan": "no_changes",
+    "bootstrap_state_migrated_from_local_to_remote": true,
+    "audited_parent_bucket_refresh_only_normalization": "Recorded the created child versioning/policy and empty tags in the parent bucket state; no infrastructure actions",
+    "remote_state_keys": ["bootstrap/terraform.tfstate", "aws/terraform.tfstate", "snowflake/terraform.tfstate"],
+    "encryption": "AES256_verified_on_bucket_and_all_state_objects",
+    "versioning": "enabled_verified",
+    "all_public_access_blocks": true,
+    "tls_only_and_administrator_boundary_policies_verified": true,
+    "ingestion_identity_list_and_read_access": "denied_as_expected",
+    "conditional_lock_second_writer": "rejected_as_expected",
+    "terraform_plan_while_test_lock_held": "lock_acquisition_failed_as_expected",
+    "only_test_owned_lock_removed": true
+  },
+  "snowflake": {
+    "inventory_status": "read_only_project_objects_inspected",
+    "database": "MARKET",
+    "pipeline_connection_role": "ACCOUNTADMIN",
+    "disposable_import_preview": {
+      "status": "passed_not_applied",
+      "managed_resources": 22,
+      "imports": 22,
+      "resource_mutations": 0,
+      "persistent_state_created": false,
+      "excludes_dashboard_service_user": true
+    },
+    "adoption_apply": {"imported": 22, "added": 0, "changed": 0, "destroyed": 0},
+    "final_plan": {"managed_resources": 23, "imports": 0, "resource_mutations": 0, "applyable": false},
+    "audited_state_only_normalization": {
+      "resources": ["POLYGON_RAW_STAGE", "MASSIVE_REFERENCE_STAGE"],
+      "field": "aws_access_point_arn",
+      "reason": "Provider refresh normalized an absent access-point field between null and empty string after import",
+      "refresh_only_state_update": true,
+      "cloud_resource_changes": 0,
+      "subsequent_strict_no_drift_plan_passed": true
+    },
+    "service_user_adoption": {
+      "name": "STREAMLIT_DASHBOARD_USER",
+      "manage_service_users": true,
+      "status": "adopted_and_verified",
+      "reason": "Provider 2.22.0 compares the unset imported mins_to_unlock with its internal default, marking computed show_output unknown despite identical final configurable fields.",
+      "reviewed_saved_plan": {"managed_resources": 23, "imports": 1, "resource_mutations": 1, "permitted_metadata_updates": 1},
+      "apply": {"imported": 1, "added": 0, "changed": 1, "destroyed": 0},
+      "exact_saved_plan_applied_with_backend_locking": true,
+      "default_off_exception_used_only_for_adoption": true,
+      "strict_follow_up_plan_passed_without_exception": true,
+      "credentials_type_role_assignments_or_grants_changed": false,
+      "user_settings_parameters_owner_and_key_fingerprints_unchanged": true,
+      "saved_credential_file_hashes_unchanged": true,
+      "pre_and_post_dashboard_reads": "8_published_marts_passed_using_existing_reader_key",
+      "execution_audit": {
+        "initial_no_user_altering_sql_check": "failed_and_investigated_without_further_apply",
+        "observed_statement": "ALTER USER STREAMLIT_DASHBOARD_USER UNSET MINS_TO_UNLOCK",
+        "statement_count": 1,
+        "statement_status": "SUCCESS",
+        "pre_adoption_lock": "snowflake_lock=false; no_lock_expiry",
+        "post_adoption_lock": "snowflake_lock=false; no_lock_expiry; mins_to_unlock_unset",
+        "effective_lock_state_changed": false,
+        "other_user_altering_statements_observed": 0,
+        "conclusion": "Redundant timer UNSET; execution was not SQL-free, but effective login settings and credentials were preserved. No corrective user-setting apply was performed."
+      },
+      "post_verification_state_observation": {
+        "field": "show_output.last_success_login",
+        "reason": "Successful dashboard verification login updated read-only metadata",
+        "native_terraform_refresh_only": true,
+        "resource_actions": 0,
+        "manual_state_edits": false,
+        "strict_follow_up_plans_without_exception": true
+      }
+    },
+    "referenced_not_managed": [
+      "COMPUTE_WH",
+      "AIRFLOW_USER",
+      "ACCOUNTADMIN",
+      "SYSADMIN",
+      "STREAMLIT_DASHBOARD_MONITOR",
+      "account-wide PUBLIC permissions",
+      "retained backup schemas and grants"
+    ],
+    "archive_access": {
+      "POLYGON_RAW_STAGE": {"listing": "passed", "sample_record_read": "passed"},
+      "MASSIVE_REFERENCE_STAGE": {"listing": "passed", "sample_record_read": "passed"}
+    },
+    "dashboard": {
+      "role_and_explicit_active_mart_grants_inspected": true,
+      "intended_reader_session_test": "passed",
+      "credential_source": "existing_keys/streamlit_dashboard_key.pem",
+      "published_marts_read_using_reader_role": 8,
+      "saved_credentials_or_role_assignments_changed": false,
+      "hosted_app_redeployed_or_reconfigured": false
+    },
+    "metadata_row_counts_before_and_after": {
+      "MARTS.CALC_SECURITY_DAILY_MOMENTUM": 3908149,
+      "MARTS.DIM_DATE": 502,
+      "MARTS.DIM_SECTOR": 71,
+      "MARTS.DIM_SECURITY": 6543,
+      "MARTS.DIM_SECURITY_HISTORY": 8550,
+      "MARTS.FCT_MARKET_DAILY_BREADTH": 502,
+      "MARTS.FCT_SECTOR_DAILY_BREADTH": 35141,
+      "MARTS.FCT_SECURITY_CURRENT_SNAPSHOT": 5159,
+      "MARTS.FCT_SECURITY_DAILY_MOMENTUM": 2567657,
+      "RAW.DAILY_STOCKS_RAW": 8270826,
+      "RAW.DAILY_STOCKS_RAW_BEFORE_REFERENCE_20261007": 7934316,
+      "RAW.PRICE_REFRESH_MANIFEST": 530,
+      "RAW.REFERENCE_MANIFEST": 1179,
+      "RAW.REFERENCE_RAW": 4048278
+    },
+    "metadata_row_counts_unchanged": true,
+    "live_reference_prerequisite_checks": "passed_DESC_only",
+    "data_content_checksum_comparison_claimed": false
+  },
+  "local_verification": {
+    "terraform_fmt_check": "passed",
+    "terraform_init_backend_false": "passed_all_three_roots",
+    "terraform_validate": "passed_all_three_roots",
+    "terraform_bootstrap_mock_test": "1_passed",
+    "python_tests": {"passed": 98, "subtests_passed": 89, "warnings": "3 existing pandas Timestamp.utcnow deprecations"},
+    "dbt_parse": "passed_with_dbt_core_1.7.20_and_snowflake_adapter_1.7.5",
+    "dbt_build_or_warehouse_tests_run": false
+  },
+  "completed_ownership_changes": [
+    "Reference loader checks integration/stage prerequisites without creating or altering them",
+    "Raw landing setup inspects the Terraform-owned RAW namespace instead of recreating it",
+    "Landing SQL contains application-owned table/checkpoint setup only",
+    "Legacy AWS deployment templates/policies archived under infra/legacy"
+  ],
+  "deliberate_manual_exceptions": [
+    "Public-key registration, credential issuance and secrets distribution",
+    "Shared/account-wide resources and retained backup grants",
+    "Massive subscription and Streamlit hosting setup"
+  ],
+  "safety": {
+    "new_state_backend_resources_created": true,
+    "existing_workload_resources_replaced_or_deleted": false,
+    "existing_workload_effective_configuration_changed": false,
+    "redundant_dashboard_lock_timer_unset_issued_by_provider": true,
+    "archive_objects_written_or_deleted": false,
+    "warehouse_data_written_or_rebuilt": false,
+    "source_api_requests_made": false,
+    "dag_activated": false,
+    "credentials_rotated": false,
+    "architecture_diagram_changed": false,
+    "git_commit_or_push_performed_during_live_adoption": false,
+    "read_checks_may_resume_existing_warehouses": true
+  }
+}

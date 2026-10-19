@@ -1,0 +1,39 @@
+# Fresh-environment example ONLY. Existing adoption uses live inventory instead.
+adopt_existing = false
+aws_profile    = "existing-admin-profile"
+account_id     = "123456789012"
+region         = "us-east-1"
+archive_bucket = "replace-with-your-unique-stock-archive-bucket"
+bucket_tags    = {}
+versioning_status        = "Enabled"
+bucket_key_enabled       = true
+blocked_encryption_types = ["SSE-C"]
+public_access = {
+  block_public_acls = true, block_public_policy = true
+  ignore_public_acls = true, restrict_public_buckets = true
+}
+ingestion_user = {
+  name = "stock-market-ingestion", path = "/", tags = {}
+}
+reader_role = {
+  name = "snowflake-stock-market-raw-reader", path = "/", tags = {}
+  description = "Allows Snowflake to read stock-market archives."
+  max_session_duration = 3600
+  assume_role_policy = <<-POLICY
+  {
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow", "Action": "sts:AssumeRole",
+      "Principal": {"AWS": "REPLACE_WITH_SNOWFLAKE_INTEGRATION_IAM_PRINCIPAL"},
+      "Condition": {"StringEquals": {"sts:ExternalId": "REPLACE_WITH_GENERATED_EXTERNAL_ID"}}
+    }]
+  }
+  POLICY
+}
+# Populate exact project-scoped JSON documents before provisioning. The legacy
+# policy references illustrate the two prefixes; they are not live inventory.
+user_inline_policies = {}
+role_inline_policies = {}
+managed_policies = {}
+user_managed_policy_arns = []
+role_managed_policy_arns = []

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: IAM identities for a stock-market raw landing bucket that already exists.
+Description: Historical reference only; existing stock-market resources are now managed with Terraform.
 
 Parameters:
   BucketName:

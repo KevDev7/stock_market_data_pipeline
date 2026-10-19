@@ -1,0 +1,9 @@
+# Copy to a Git-ignored *.backend.hcl. Use the same bucket/profile, distinct keys:
+# bootstrap/terraform.tfstate, aws/terraform.tfstate, snowflake/terraform.tfstate.
+bucket               = "stock-market-tfstate-645968351825-us-east-1"
+key                  = "aws/terraform.tfstate"
+region               = "us-east-1"
+profile              = "existing-admin-profile"
+encrypt              = true
+use_lockfile         = true
+allowed_account_ids  = ["645968351825"]

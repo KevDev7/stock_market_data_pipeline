@@ -69,8 +69,14 @@ class SnowflakeClient:
         """Ensure database tables exist in configured schema and admin schema."""
         logger.info("Checking required Snowflake objects")
 
-        # Create the configured schema if it doesn’t exist
-        self.cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SNOWFLAKE['schema']};")
+        # Terraform owns the RAW namespace; ingestion must not recreate it.
+        try:
+            self.cursor.execute(f"DESC SCHEMA {SNOWFLAKE['schema']};")
+        except Exception as exc:
+            raise RuntimeError(
+                "Cannot inspect the configured RAW namespace. "
+                "Review/apply infra/terraform before running ingestion."
+            ) from exc
         self.cursor.execute("CREATE SCHEMA IF NOT EXISTS ADMIN;")  # keep for checkpoints
 
         # Raw Polygon.io/Massive.com landing table. dbt owns parsing and typing.

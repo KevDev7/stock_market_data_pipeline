@@ -1,9 +1,9 @@
--- Current portfolio deployment reference. Replace the account, role, and bucket
--- values before using this script in another environment.
-USE ROLE ACCOUNTADMIN;
+-- Application-owned landing/checkpoint setup only. Terraform provisions MARKET,
+-- RAW, the storage integration, file format and external stages first.
+-- This is not an infrastructure deployment script. See ../terraform/README.md.
+-- Use the configured ingestion role; no administrative role switch is required.
 USE DATABASE MARKET;
-
-CREATE SCHEMA IF NOT EXISTS RAW;
+USE SCHEMA RAW;
 CREATE SCHEMA IF NOT EXISTS ADMIN;
 
 CREATE TABLE IF NOT EXISTS RAW.DAILY_STOCKS_RAW (
@@ -29,26 +29,6 @@ CREATE TABLE IF NOT EXISTS ADMIN.INGESTION_CHECKPOINTS (
     S3_SHA256 STRING
 );
 
-CREATE STORAGE INTEGRATION IF NOT EXISTS STOCK_MARKET_S3_INTEGRATION
-    TYPE = EXTERNAL_STAGE
-    STORAGE_PROVIDER = S3
-    ENABLED = TRUE
-    STORAGE_AWS_ROLE_ARN =
-        'arn:aws:iam::645968351825:role/snowflake-stock-market-raw-reader'
-    STORAGE_ALLOWED_LOCATIONS = (
-        's3://stock-market-data-pipeline-645968351825-us-east-1/raw/polygon/grouped-daily/'
-    )
-    COMMENT = 'Read-only integration for stock-market raw landing data';
-
-CREATE FILE FORMAT IF NOT EXISTS RAW.POLYGON_NDJSON_GZIP
-    TYPE = JSON
-    COMPRESSION = AUTO;
-
-CREATE STAGE IF NOT EXISTS RAW.POLYGON_RAW_STAGE
-    URL = 's3://stock-market-data-pipeline-645968351825-us-east-1/raw/polygon/grouped-daily/'
-    STORAGE_INTEGRATION = STOCK_MARKET_S3_INTEGRATION
-    FILE_FORMAT = RAW.POLYGON_NDJSON_GZIP;
-
 ALTER TABLE ADMIN.INGESTION_CHECKPOINTS
     ADD COLUMN IF NOT EXISTS S3_BUCKET STRING;
 ALTER TABLE ADMIN.INGESTION_CHECKPOINTS
@@ -57,5 +37,3 @@ ALTER TABLE ADMIN.INGESTION_CHECKPOINTS
     ADD COLUMN IF NOT EXISTS S3_ETAG STRING;
 ALTER TABLE ADMIN.INGESTION_CHECKPOINTS
     ADD COLUMN IF NOT EXISTS S3_SHA256 STRING;
-
-DESC INTEGRATION STOCK_MARKET_S3_INTEGRATION;

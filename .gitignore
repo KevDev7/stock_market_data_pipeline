@@ -63,3 +63,18 @@ airflow/webserver_config.py
 data-viz/.streamlit/secrets.toml
 *.pem
 .cache/
+
+# Terraform: commit configuration and provider locks, never state or credentials.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+*.tfvars
+*.tfvars.json
+*.backend.hcl
+terraform.rc
+.terraformrc
+crash.log
+crash.*.log
+infra/terraform/bootstrap/backend.tf

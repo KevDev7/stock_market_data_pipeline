@@ -1,0 +1,4 @@
+# After the bootstrap apply, copy to backend.tf and run init -migrate-state.
+terraform {
+  backend "s3" {}
+}

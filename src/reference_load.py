@@ -22,26 +22,57 @@ class ReferenceWarehouse:
             raise ValueError('Invalid database identifier')
         self.stage = self.database + '.RAW.MASSIVE_REFERENCE_STAGE'
 
-    def setup(self):
-        # Preserve the integration's existing allowed locations; add only ours.
-        self.cursor.execute('DESC INTEGRATION STOCK_MARKET_S3_INTEGRATION')
-        properties = {r[0]:r[2] for r in self.cursor.fetchall()}
-        locations = [x.strip() for x in properties['STORAGE_ALLOWED_LOCATIONS'].split(',') if x.strip()]
+    def check_infrastructure(self):
+        """Inspect Terraform-owned prerequisites without creating or altering them."""
+        guidance = 'Review/apply infra/terraform before running reference ingestion.'
+
+        def fail(problem):
+            raise RuntimeError('Reference infrastructure: ' + problem + '. ' + guidance)
+
+        if not AWS.get('s3_bucket'):
+            fail('AWS_S3_BUCKET is not configured')
         location = 's3://' + AWS['s3_bucket'] + '/' + REFERENCE_PREFIX + '/'
-        if location not in locations:
-            locations.append(location)
-            if any("'" in x for x in locations):
-                raise ValueError('Unexpected integration location')
-            quoted = ','.join("'"+x+"'" for x in locations)
-            self.cursor.execute('ALTER STORAGE INTEGRATION STOCK_MARKET_S3_INTEGRATION SET STORAGE_ALLOWED_LOCATIONS=('+quoted+')')
+        try:
+            self.cursor.execute('DESC INTEGRATION STOCK_MARKET_S3_INTEGRATION')
+            properties = {r[0]: r[2] for r in self.cursor.fetchall()}
+        except Exception as exc:
+            raise RuntimeError('Cannot inspect the reference storage integration. ' + guidance) from exc
+        if str(properties.get('ENABLED', '')).lower() != 'true':
+            fail('storage integration is not enabled')
+        if properties.get('STORAGE_PROVIDER') != 'S3':
+            fail('storage integration is not configured for S3')
+
+        def covers(value):
+            return value == '*' or location.startswith(value.rstrip('/') + '/')
+
+        locations = [x.strip() for x in properties.get('STORAGE_ALLOWED_LOCATIONS', '').split(',') if x.strip()]
+        blocked = [x.strip() for x in properties.get('STORAGE_BLOCKED_LOCATIONS', '').split(',') if x.strip()]
+        if not any(covers(value) for value in locations) or any(covers(value) for value in blocked):
+            fail('reference archive location is not permitted by the integration')
+        try:
+            self.cursor.execute(f'DESC STAGE {self.stage}')
+            stage = {(r[0], r[1]): r[3] for r in self.cursor.fetchall()}
+        except Exception as exc:
+            raise RuntimeError('Cannot inspect the reference external stage. ' + guidance) from exc
+        try:
+            urls = json.loads(stage.get(('STAGE_LOCATION', 'URL'), '[]'))
+        except (ValueError, TypeError):
+            fail('reference stage location is malformed')
+        if urls != [location]:
+            fail('reference stage points to a different archive location')
+        if stage.get(('STAGE_INTEGRATION', 'STORAGE_INTEGRATION')) != 'STOCK_MARKET_S3_INTEGRATION':
+            fail('reference stage uses a different storage integration')
+        if (stage.get(('STAGE_FILE_FORMAT', 'TYPE')) != 'JSON'
+                or stage.get(('STAGE_FILE_FORMAT', 'COMPRESSION')) != 'AUTO'):
+            fail('reference stage must use the Terraform-managed JSON/AUTO format')
+
+    def setup(self):
+        self.check_infrastructure()
         self.cursor.execute(f'''CREATE TABLE IF NOT EXISTS {self.database}.RAW.REFERENCE_RAW (
             API_DATE DATE, RUN_ID STRING, SOURCE STRING, RAW_PAYLOAD STRING, INGESTED_AT TIMESTAMP_NTZ)''')
         self.cursor.execute(f'''CREATE TABLE IF NOT EXISTS {self.database}.RAW.REFERENCE_MANIFEST (
             API_DATE DATE, SOURCE STRING, RUN_ID STRING, ROW_COUNT INTEGER,
             REQUESTED_COUNT INTEGER, S3_KEY STRING, SHA256 STRING, COMPLETED_AT TIMESTAMP_NTZ)''')
-        self.cursor.execute(f'''CREATE STAGE IF NOT EXISTS {self.stage}
-            URL='{location}' STORAGE_INTEGRATION=STOCK_MARKET_S3_INTEGRATION
-            FILE_FORMAT=(TYPE=JSON COMPRESSION=AUTO)''')
 
     def completed(self, source):
         self.cursor.execute(f'SELECT API_DATE FROM {self.database}.RAW.REFERENCE_MANIFEST WHERE SOURCE=%s',(source,))

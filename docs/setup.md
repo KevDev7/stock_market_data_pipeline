@@ -3,9 +3,8 @@
 ## Prerequisites
 
 - Docker and Docker Compose
-- A Snowflake account, database, warehouse, and role able to create schemas
-- An existing versioned S3 bucket for the raw archive
-- AWS permission to create a scoped ingestion user and Snowflake reader role
+- AWS and Snowflake accounts; provision infrastructure with Terraform for a new environment
+- For normal runs, the existing Snowflake database/warehouse/role and versioned S3 archive
 - A Massive.com/Polygon.io API key when resuming source ingestion
 - Python 3 for optional local commands
 
@@ -33,25 +32,26 @@ keys, Snowflake private keys, `.env`, or Streamlit secrets.
 
 ## AWS and Snowflake Integration
 
-The repository includes infrastructure files for the current deployment and the
-resources needed to recreate the S3 connection:
+The infrastructure setup is documented in the
+[Terraform adoption and provisioning guide](../infra/terraform/README.md).
+AWS and Snowflake have separate state; Airflow/Docker Compose/dbt remain in their
+existing code-based configuration. Adoption does not require ingestion, a
+warehouse rebuild, or backfilling data.
 
-- `infra/aws/stock-market-s3-iam.yaml`
-- `infra/snowflake/s3_raw_landing.sql`
+**Existing resources were safely adopted on 2026-10-19.** See the
+[verification results](infrastructure-adoption-results.json). Do not create a
+second CloudFormation manager for them or reimport them into a different state.
 
-For a new environment:
+For another environment, follow the Terraform guide's state-backend bootstrap,
+fresh provisioning and Snowflake/AWS trust sequence. Keep provider credentials
+outside Git and use a dedicated infrastructure-administrator profile, not the
+ingestion profile. Normal ingestion needs only the existing application credentials.
 
-1. Create an S3 bucket, enable versioning, and choose the raw prefix.
-2. Replace the account, role, and bucket values in the Snowflake SQL.
-3. Create the Snowflake storage integration and run `DESC INTEGRATION
-   STOCK_MARKET_S3_INTEGRATION` to obtain its IAM principal and external ID.
-4. Deploy the CloudFormation IAM template using those trust values and the
-   existing bucket name.
-5. Set the bucket, prefix, profile, and external-stage values in `.env`.
-
-The CloudFormation template intentionally assumes the S3 bucket already exists.
-Do not redeploy it over manually created IAM resources in the existing portfolio
-environment.
+Terraform owns the database/RAW namespace, stages, file format, integration and
+project infrastructure/access. The ingestion code owns raw/operational tables;
+dbt owns transformed schemas/models. `infra/snowflake/s3_raw_landing.sql` now
+contains application-owned landing/checkpoint setup only. Historical AWS
+templates/policies remain in `infra/legacy/` for provenance, not deployment.
 
 ## Snowflake Key Authentication
 

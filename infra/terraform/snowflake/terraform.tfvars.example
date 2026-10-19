@@ -1,0 +1,45 @@
+# Fresh-environment example ONLY. Existing adoption uses live inventory instead.
+adopt_existing       = false
+manage_service_users = true
+organization_name = "YOUR_ORGANIZATION"
+account_name      = "YOUR_ACCOUNT"
+admin_role        = "ACCOUNTADMIN"
+database_name     = "MARKET"
+database_comment  = ""
+# Null preserves inheritance; it does not mean zero days of retention.
+retention_days     = null
+raw_retention_days = null
+raw_schema_name    = "RAW"
+raw_schema_comment = ""
+archive_bucket   = "replace-with-your-unique-stock-archive-bucket"
+price_prefix     = "raw/polygon/grouped-daily"
+reference_prefix = "raw/massive/reference"
+storage_role_arn = "arn:aws:iam::123456789012:role/snowflake-stock-market-raw-reader"
+storage_integration_name    = "STOCK_MARKET_S3_INTEGRATION"
+storage_integration_comment = "Read-only Snowflake integration for stock-market raw landing data"
+storage_external_id         = null
+price_stage_name     = "POLYGON_RAW_STAGE"
+reference_stage_name = "MASSIVE_REFERENCE_STAGE"
+file_format_name     = "POLYGON_NDJSON_GZIP"
+warehouses = {
+  dashboard = {
+    name = "STREAMLIT_DASHBOARD_WH", size = "XSMALL", generation = "2"
+    auto_suspend = 60, auto_resume = true
+    resource_monitor = "REPLACE_WITH_EXISTING_RESOURCE_MONITOR"
+    enable_query_acceleration = true, query_acceleration_max_scale_factor = 2
+    comment = ""
+  }
+}
+roles = { dashboard = { name = "STREAMLIT_DASHBOARD_ROLE", comment = "" } }
+service_users = {
+  dashboard = {
+    name = "STREAMLIT_DASHBOARD_USER", login_name = "STREAMLIT_DASHBOARD_USER"
+    display_name = "STREAMLIT_DASHBOARD_USER", disabled = "false", comment = null
+    default_role = "STREAMLIT_DASHBOARD_ROLE", default_warehouse = "STREAMLIT_DASHBOARD_WH"
+    default_namespace = "MARKET.MARTS", default_secondary_roles_option = "ALL"
+  }
+}
+# Initial provisioning: add explicit grants and membership only once the
+# dbt-owned MARTS schema and published tables exist. See the adoption guide.
+role_memberships = {}
+grants = {}

@@ -4,6 +4,7 @@
 
 - [Architecture and data model](architecture.md)
 - [Environment and installation](setup.md)
+- [Infrastructure configuration and safe Terraform adoption](../infra/terraform/README.md)
 - [Operations, backfills, and testing](operations.md)
 - [Limitations](limitations.md)
 
