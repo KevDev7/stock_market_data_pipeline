@@ -1,0 +1,60 @@
+{
+  "checked_on": "2026-10-20",
+  "status": "completed_original_url_verified",
+  "repository": "KevDev7/stock_market_data_pipeline",
+  "deployment_branch": "main",
+  "deployed_commit": "513809d790b55a9e25fd2a95b0ae72c79fc72006",
+  "entrypoint": "data-viz/streamlit_app.py",
+  "python_version": "3.12.15",
+  "temporary_verification_url": "https://stock-market-main-preview.streamlit.app/",
+  "url": "https://russell3000-market-intelligence.streamlit.app/",
+  "original_url_reassigned_to_verified_replacement": true,
+  "old_deployment_deleted": true,
+  "obsolete_branches_deleted": true,
+  "public_access": "public_and_searchable",
+  "public_home_verified_without_management_login": true,
+  "restart_after_url_reassignment": true,
+  "final_home_check": {
+    "latest_trade_date": "2025-12-31",
+    "coverage_security_identities": 5159,
+    "market_rsi_display": "42.8"
+  },
+  "existing_dashboard_reader_credentials_reused": true,
+  "snowflake_role": "STREAMLIT_DASHBOARD_ROLE",
+  "predeployment_reader_check": {
+    "status": "passed",
+    "published_marts_read": 8
+  },
+  "hosted_views_verified": [
+    {
+      "page": "Home",
+      "latest_trade_date": "2025-12-31",
+      "coverage_security_identities": 5159,
+      "market_rsi_display": "42.8"
+    },
+    {
+      "page": "Market Breadth",
+      "latest_trade_date": "2025-12-31",
+      "stocks_traded_display": "5,159",
+      "ad_ratio_display": "0.43"
+    },
+    {
+      "page": "Universe Screener",
+      "rows_returned": 500,
+      "median_1m_return_display": "22.06%"
+    },
+    {
+      "page": "Ticker Momentum",
+      "selected_security": "A — Agilent Technologies Inc. (2024-01-02 to 2025-12-31)",
+      "latest_close_display": "$136.07",
+      "rsi_display": "21.8"
+    },
+    {
+      "page": "Industry Breadth",
+      "latest_trade_date": "2025-12-31",
+      "strongest_industry_group": "SIC 89 - Other services"
+    }
+  ],
+  "warehouse_data_or_permissions_modified": false,
+  "ingestion_resumed": false
+}

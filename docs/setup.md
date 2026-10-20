@@ -95,6 +95,11 @@ The hosted dashboard is available at:
 
 <https://russell3000-market-intelligence.streamlit.app/>
 
+The hosted app deploys from `main`, with `data-viz/streamlit_app.py` as its
+entrypoint. Dashboard changes pushed to `main` update this deployment.
+The [deployment migration record](hosted-dashboard-main-migration-results.json)
+documents the branch switch and hosted verification on 2026-10-20.
+
 For new Community Cloud deployments, select repository
 `KevDev7/stock_market_data_pipeline`, branch `main`, and entrypoint
 `data-viz/streamlit_app.py`. Use Python 3.12 and configure the Snowflake
