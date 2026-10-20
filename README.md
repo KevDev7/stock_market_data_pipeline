@@ -9,8 +9,7 @@ by a hosted Streamlit dashboard.
 
 > The reporting window is 2024–2025. The hosted application now labels the
 > provider-classified common-stock universe and SIC industry groups explicitly.
-> Its URL retains the legacy Russell 3000 name. It deploys from
-> `codex/warehouse-marts-scd2`, not `main`.
+> Its URL retains the legacy Russell 3000 name.
 
 <p align="center">
   <img src="assets/streamlit_app.png" width="100%" alt="Russell 3000 Market Intelligence dashboard">

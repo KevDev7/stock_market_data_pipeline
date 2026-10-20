@@ -248,7 +248,7 @@ MARKET.BACKUP_MARTS_SMA_FIX_20261007
 The earlier reference-migration backups are also preserved. No ingestion was
 resumed and no additional API data was requested. The warehouse rebuild itself
 did not deploy dashboard code. A separate dashboard-only commit, `d97f010`, was
-subsequently pushed to the app's configured `codex/warehouse-marts-scd2` branch,
+subsequently pushed to the app's then-configured deployment branch,
 and Community Cloud's Reboot action reloaded the app and its in-memory cache.
 All five hosted views were verified, including AAPL identity selection. Remote
 `main` was not updated. See [hosted deployment evidence](hosted-dashboard-deployment-results.json).

@@ -3,7 +3,6 @@
   "status": "deployed_and_all_five_hosted_views_verified",
   "url": "https://russell3000-market-intelligence.streamlit.app/",
   "repository": "KevDev7/stock_market_data_pipeline",
-  "deployment_branch": "codex/warehouse-marts-scd2",
   "entrypoint": "data-viz/streamlit_app.py",
   "dashboard_commit": "d97f010c8b6e8bd906f15ed7904d6a4ed4cd585f",
   "remote_deployment_branch_verified": true,

@@ -28,8 +28,7 @@ it, export fresh SVG and PNG copies locally using Draw.io Desktop:
 sh scripts/export_architecture_diagram.sh
 ```
 
-The official `drawio@drawio` Codex plugin and Draw.io Desktop were installed
-and native exports verified on 2026-10-08. The `.drawio.png` and `.drawio.svg`
+The `.drawio.png` and `.drawio.svg`
 exports contain the editable XML; the shorter `.png` and `.svg` filenames are
 identical copies used by existing documentation links. The source `.drawio`
 is retained. No browser upload or raster image generation is needed.

@@ -106,5 +106,5 @@
   },
   "static_checks": {"python_compilation_passed": true, "compose_configuration_passed": true, "git_diff_whitespace_passed": true},
   "hosted_dashboard_deployed_or_cache_reset": true,
-  "subsequent_dashboard_deployment": "hosted-dashboard-deployment-results.json; dashboard-only commit deployed to codex/warehouse-marts-scd2, all five hosted views verified; remote main and other pipeline changes were not pushed"
+  "subsequent_dashboard_deployment": "hosted-dashboard-deployment-results.json; dashboard-only commit deployed to the then-configured deployment branch, all five hosted views verified; remote main and other pipeline changes were not pushed"
 }

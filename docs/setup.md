@@ -95,11 +95,17 @@ The hosted dashboard is available at:
 
 <https://russell3000-market-intelligence.streamlit.app/>
 
-The existing Community Cloud deployment follows
-`codex/warehouse-marts-scd2`, with `data-viz/streamlit_app.py` as its entrypoint.
-Pushing to `main` alone does not update this app. Publish verified dashboard
-changes to its configured deployment branch; use Community Cloud's Reboot action
-if the running app has not picked up the commit. Do not commit dashboard secrets.
+For new Community Cloud deployments, select repository
+`KevDev7/stock_market_data_pipeline`, branch `main`, and entrypoint
+`data-viz/streamlit_app.py`. Use Python 3.12 and configure the Snowflake
+credentials in Community Cloud's Secrets settings. Do not commit dashboard secrets.
+
+For an existing app, check its configured branch in the Community Cloud workspace
+before publishing changes or deleting branches. Changing the deployment branch
+requires [redeploying the app](https://docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app/rename-your-app).
+Preserve its secrets, Python version, sharing settings, and custom URL first.
+Use Community Cloud's Reboot action if the running app has not picked up a commit
+on its configured branch.
 
 For local use, create `data-viz/.streamlit/secrets.toml`:
 
