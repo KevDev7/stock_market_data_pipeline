@@ -42,12 +42,13 @@ class BatchLandingTest(unittest.TestCase):
         self.assertEqual(len(deletes),2)
         self.assertTrue(all(call.args[1]==['2024-01-02','massive_ticker_catalog'] for call in deletes))
         self.assertIn('COMMIT',self.statements())
+        self.assertTrue(any('DELETE FROM ' in s and '.ADMIN.REFERENCE_MANIFEST' in s for s in self.statements()))
 
     def test_empty_successful_overview_still_records_manifest(self):
         self.cursor.fetchall.return_value=[]
         self.run_batch([([],'2024-01-02','massive_ticker_overview',1)])
         self.assertFalse(any(s.startswith('COPY') for s in self.statements()))
-        self.assertTrue(any('REFERENCE_MANIFEST VALUES' in s for s in self.statements()))
+        self.assertTrue(any('.ADMIN.REFERENCE_MANIFEST VALUES' in s for s in self.statements()))
 
     def test_archive_count_mismatch_cannot_change_raw_tables(self):
         self.cursor.fetchall.return_value=[]
@@ -74,7 +75,7 @@ class BatchLandingTest(unittest.TestCase):
         deletes=[s for s in self.statements() if s.startswith('DELETE')]
         self.assertEqual(len(deletes),1)
         self.assertIn('API_DATE IN (SELECT DISTINCT API_DATE FROM',deletes[0])
-        self.assertTrue(any('PRICE_REFRESH_MANIFEST' in s for s in self.statements()))
+        self.assertTrue(any('.ADMIN.PRICE_REFRESH_MANIFEST' in s for s in self.statements()))
 
 
 if __name__=='__main__':

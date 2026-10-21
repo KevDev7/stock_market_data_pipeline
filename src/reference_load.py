@@ -6,6 +6,7 @@ import uuid
 import pandas as pd
 
 from src.config import AWS, SNOWFLAKE
+from src.ingestion_metadata import ensure_manifest, require_metadata_migrated
 from src.reference import landing_rows
 from src.s3_client import S3RawClient
 
@@ -68,14 +69,13 @@ class ReferenceWarehouse:
 
     def setup(self):
         self.check_infrastructure()
+        require_metadata_migrated(self.cursor, self.database)
         self.cursor.execute(f'''CREATE TABLE IF NOT EXISTS {self.database}.RAW.REFERENCE_RAW (
             API_DATE DATE, RUN_ID STRING, SOURCE STRING, RAW_PAYLOAD STRING, INGESTED_AT TIMESTAMP_NTZ)''')
-        self.cursor.execute(f'''CREATE TABLE IF NOT EXISTS {self.database}.RAW.REFERENCE_MANIFEST (
-            API_DATE DATE, SOURCE STRING, RUN_ID STRING, ROW_COUNT INTEGER,
-            REQUESTED_COUNT INTEGER, S3_KEY STRING, SHA256 STRING, COMPLETED_AT TIMESTAMP_NTZ)''')
+        ensure_manifest(self.cursor, self.database, 'REFERENCE_MANIFEST')
 
     def completed(self, source):
-        self.cursor.execute(f'SELECT API_DATE FROM {self.database}.RAW.REFERENCE_MANIFEST WHERE SOURCE=%s',(source,))
+        self.cursor.execute(f'SELECT API_DATE FROM {self.database}.ADMIN.REFERENCE_MANIFEST WHERE SOURCE=%s',(source,))
         return {str(r[0]) for r in self.cursor.fetchall()}
 
     def known_issuers(self):
@@ -110,10 +110,10 @@ class ReferenceWarehouse:
             if self.cursor.fetchone()[0] != len(rows):
                 raise ValueError('Reference archive/warehouse row-count mismatch')
             self.cursor.execute('BEGIN')
-            for table in ['REFERENCE_RAW','REFERENCE_MANIFEST']:
-                self.cursor.execute(f'DELETE FROM {self.database}.RAW.{table} WHERE API_DATE=%s AND SOURCE=%s',(str(date),source))
+            for table in ['RAW.REFERENCE_RAW','ADMIN.REFERENCE_MANIFEST']:
+                self.cursor.execute(f'DELETE FROM {self.database}.{table} WHERE API_DATE=%s AND SOURCE=%s',(str(date),source))
             self.cursor.execute(f'INSERT INTO {self.database}.RAW.REFERENCE_RAW SELECT * FROM {temp}')
-            self.cursor.execute(f'''INSERT INTO {self.database}.RAW.REFERENCE_MANIFEST
+            self.cursor.execute(f'''INSERT INTO {self.database}.ADMIN.REFERENCE_MANIFEST
                 VALUES (%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP())''',
                 (str(date),source,run_id,len(rows),requested_count if requested_count is not None else len(rows),
                  archived['key'],archived['sha256']))

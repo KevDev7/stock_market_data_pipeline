@@ -50,8 +50,17 @@ ingestion profile. Normal ingestion needs only the existing application credenti
 Terraform owns the database/RAW namespace, stages, file format, integration and
 project infrastructure/access. The ingestion code owns raw/operational tables;
 dbt owns transformed schemas/models. `infra/snowflake/s3_raw_landing.sql` now
-contains application-owned landing/checkpoint setup only. Historical AWS
+contains application-owned landing and ingestion-metadata setup only. Historical AWS
 templates/policies remain in `infra/legacy/` for provenance, not deployment.
+
+All ingestion tracking lives in `MARKET.ADMIN`: daily price checkpoints,
+reference load manifests, and historical price refresh manifests. Source payloads
+remain in `MARKET.RAW`. For an existing checkout that still has manifests in RAW,
+follow the [metadata migration procedure](operations.md#move-ingestion-manifests-to-admin)
+before running updated ingestion setup. Setup refuses to create empty manifests
+alongside unmigrated records. Fresh environments create the manifests in ADMIN.
+The Python reference setup creates its own manifest; the explicit historical
+refresh command creates its refresh manifest when that capability is first used.
 
 ## Snowflake Key Authentication
 

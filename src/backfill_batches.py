@@ -88,7 +88,7 @@ def land_batch(warehouse, items, prices=False, workers=8, refresh_campaign=None)
                 cur.execute(f'INSERT INTO {table} SELECT * FROM {temp}')
                 placeholders=','.join(['(%s,%s,%s,%s,CURRENT_TIMESTAMP())']*len(archived))
                 params=[v for e in archived for v in [refresh_campaign,e['date'],e['key'],e['sha256']]]
-                cur.execute(f'''INSERT INTO {database}.RAW.PRICE_REFRESH_MANIFEST
+                cur.execute(f'''INSERT INTO {database}.ADMIN.PRICE_REFRESH_MANIFEST
                     (CAMPAIGN,API_DATE,S3_KEY,SHA256,REFRESHED_AT) VALUES {placeholders}''',params)
             else:
                 cur.execute(f'''INSERT INTO {table} SELECT t.* FROM {temp} t
@@ -106,12 +106,12 @@ def land_batch(warehouse, items, prices=False, workers=8, refresh_campaign=None)
             condition=' OR '.join(['(API_DATE=%s AND SOURCE=%s)']*len(archived))
             pairs=[v for e in archived for v in [e['date'],e['source']]]
             cur.execute(f'DELETE FROM {table} WHERE {condition}',pairs)
-            cur.execute(f'DELETE FROM {database}.RAW.REFERENCE_MANIFEST WHERE {condition}',pairs)
+            cur.execute(f'DELETE FROM {database}.ADMIN.REFERENCE_MANIFEST WHERE {condition}',pairs)
             cur.execute(f'INSERT INTO {table} SELECT * FROM {temp}')
             placeholders=','.join(['(%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP())']*len(archived))
             params=[v for e in archived for v in [e['date'],e['source'],e['run_id'],e['row_count'],
                                                 e['requested'],e['key'],e['sha256']]]
-            cur.execute(f'INSERT INTO {database}.RAW.REFERENCE_MANIFEST VALUES {placeholders}',params)
+            cur.execute(f'INSERT INTO {database}.ADMIN.REFERENCE_MANIFEST VALUES {placeholders}',params)
         cur.execute('COMMIT')
     except BaseException:
         cur.execute('ROLLBACK')

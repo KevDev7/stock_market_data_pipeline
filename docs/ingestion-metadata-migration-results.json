@@ -1,0 +1,65 @@
+{
+  "verified_on": "2026-10-21",
+  "status": "completed",
+  "database": "MARKET",
+  "tables": {
+    "ADMIN.REFERENCE_MANIFEST": {
+      "previous_location": "RAW.REFERENCE_MANIFEST",
+      "rows_before": 1179,
+      "rows_after": 1179,
+      "content_fingerprint_before": "8718346154198119472",
+      "content_fingerprint_after": "8718346154198119472",
+      "columns_ownership_and_grants_unchanged": true
+    },
+    "ADMIN.PRICE_REFRESH_MANIFEST": {
+      "previous_location": "RAW.PRICE_REFRESH_MANIFEST",
+      "rows_before": 530,
+      "rows_after": 530,
+      "content_fingerprint_before": "-779178200663326699",
+      "content_fingerprint_after": "-779178200663326699",
+      "columns_ownership_and_grants_unchanged": true
+    },
+    "ADMIN.INGESTION_CHECKPOINTS": {
+      "rows": 1871,
+      "contents_columns_ownership_and_grants_unchanged": true
+    }
+  },
+  "method": "Two ALTER TABLE RENAME TO statements; no table copies or recreations",
+  "verification": {
+    "python_unit_tests_passed": 114,
+    "dbt_parse": "passed",
+    "dbt_catalog_completeness_test": "passed",
+    "dbt_models_rebuilt": 0,
+    "dbt_failure_storage": false,
+    "application_role": "ACCOUNTADMIN",
+    "application_manifest_and_checkpoint_reads": "passed",
+    "required_write_permissions": "Verified through retained ownership and effective schema access; no write probe",
+    "fresh_setup_guard_sql": "passed without running setup DDL",
+    "verified_migration_rerun": "passed; no additional renames",
+    "successful_cross_schema_renames": 2,
+    "query_history_rows_reviewed": 97,
+    "data_writes_observed_in_available_query_history": 0,
+    "unexpected_object_mutations_observed": 0,
+    "legacy_raw_manifest_tables_or_compatibility_views": 0,
+    "raw_and_mart_row_counts": "unchanged against pre-migration metadata baseline",
+    "dashboard_authentication_before_and_after": "passed",
+    "published_marts_read_before_and_after": 8,
+    "private_journal": ".cache/ingestion-metadata/migration.json"
+  },
+  "runtime": {
+    "running_docker_containers_at_cutover": 0,
+    "active_local_ingestion_or_refresh_processes": 0,
+    "active_snowflake_writers_at_preflight": 0,
+    "airflow": "No Airflow containers were present; orchestration remained stopped and no DAG was activated"
+  },
+  "boundaries": {
+    "source_api_requests": false,
+    "s3_archive_rewrites": false,
+    "backfill_or_ingestion_run": false,
+    "warehouse_source_or_mart_data_writes": false,
+    "credentials_changed": false,
+    "dashboard_deployed": false,
+    "diagrams_changed": false,
+    "commit_or_push_performed_during_live_migration": false
+  }
+}

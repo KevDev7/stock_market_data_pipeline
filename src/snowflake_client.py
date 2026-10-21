@@ -11,6 +11,7 @@ import pendulum
 from snowflake.connector import connect
 
 from src.config import AWS, SNOWFLAKE
+from src.ingestion_metadata import require_metadata_migrated, validate_database
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,9 @@ class SnowflakeClient:
                 "Cannot inspect the configured RAW namespace. "
                 "Review/apply infra/terraform before running ingestion."
             ) from exc
-        self.cursor.execute("CREATE SCHEMA IF NOT EXISTS ADMIN;")  # keep for checkpoints
+        database = validate_database(SNOWFLAKE['database'])
+        require_metadata_migrated(self.cursor, database)
+        self.cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {database}.ADMIN;")
 
         # Raw Polygon.io/Massive.com landing table. dbt owns parsing and typing.
         self.cursor.execute(f"""
@@ -91,8 +94,8 @@ class SnowflakeClient:
         """)
 
         # Checkpoints table (still lives in ADMIN schema)
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS ADMIN.INGESTION_CHECKPOINTS (
+        self.cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {database}.ADMIN.INGESTION_CHECKPOINTS (
                 RUN_ID STRING,
                 API_DATE DATE,
                 STATUS STRING,
@@ -110,7 +113,7 @@ class SnowflakeClient:
 
         for column in ("S3_BUCKET", "S3_KEY", "S3_ETAG", "S3_SHA256"):
             self.cursor.execute(
-                f"ALTER TABLE ADMIN.INGESTION_CHECKPOINTS "
+                f"ALTER TABLE {database}.ADMIN.INGESTION_CHECKPOINTS "
                 f"ADD COLUMN IF NOT EXISTS {column} STRING"
             )
 
@@ -214,7 +217,7 @@ class SnowflakeClient:
         completed_at = now if status in ["completed", "failed"] else None
 
         query = f"""
-            INSERT INTO ADMIN.INGESTION_CHECKPOINTS (
+            INSERT INTO {validate_database(SNOWFLAKE['database'])}.ADMIN.INGESTION_CHECKPOINTS (
                 RUN_ID, API_DATE, STATUS, TOTAL_TICKERS,
                 ROWS_INSERTED, STARTED_AT, COMPLETED_AT, ERROR_MESSAGE,
                 S3_BUCKET, S3_KEY, S3_ETAG, S3_SHA256
@@ -237,9 +240,9 @@ class SnowflakeClient:
 
     def get_completed_dates(self):
         """Return all API_DATE values where status='completed'."""
-        query = """
+        query = f"""
             SELECT DISTINCT API_DATE
-            FROM ADMIN.INGESTION_CHECKPOINTS
+            FROM {validate_database(SNOWFLAKE['database'])}.ADMIN.INGESTION_CHECKPOINTS
             WHERE STATUS = 'completed'
         """
         try:

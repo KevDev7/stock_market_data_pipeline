@@ -31,7 +31,7 @@ class ReferenceSetupTest(unittest.TestCase):
         ]
 
     def configure(self):
-        self.cursor.fetchall.side_effect = [self.integration, self.stage]
+        self.cursor.fetchall.side_effect = [self.integration, self.stage, [], []]
 
     def statements(self):
         return [call.args[0] for call in self.cursor.execute.call_args_list]

@@ -6,5 +6,9 @@ sources:
     tables:
       - name: REFERENCE_RAW
         description: Untouched Massive reference responses with operational envelopes.
+  - name: admin_ingestion
+    database: "{{ env_var('SNOWFLAKE_DATABASE', 'MARKET') }}"
+    schema: ADMIN
+    tables:
       - name: REFERENCE_MANIFEST
         description: Atomic completion records for complete source/date batches.

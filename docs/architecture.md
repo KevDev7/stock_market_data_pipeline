@@ -74,7 +74,7 @@ archive.
 
 Massive daily catalogs and quarterly issuer overviews use the same raw envelope
 and are archived under raw/massive/reference/<source>/api_date=.../run_id=....
-REFERENCE_MANIFEST records complete source/date counts and archive checksums.
+`ADMIN.REFERENCE_MANIFEST` records complete source/date counts and archive checksums.
 Incomplete pagination or archive/COPY count mismatches fail before publication.
 
 The migration refreshes retained split-adjusted prices to the same retrieval
@@ -87,12 +87,12 @@ Historical versions beyond the active reporting window remain retained.
 
 | Schema | Responsibility | Main objects |
 |---|---|---|
-| `RAW` | Queryable source landing | `DAILY_STOCKS_RAW`, `REFERENCE_RAW`, source manifests, external stages |
+| `RAW` | Queryable source landing | `DAILY_STOCKS_RAW`, `REFERENCE_RAW`, external stages |
 | `STAGING` | Standardize each source, resolve duplicates, flag invalid prices | `STG_DAILY_STOCKS`, `STG_MARKET__CATALOG`, `STG_MARKET__ISSUER_OBSERVATIONS` |
 | `INTERMEDIATE` | Daily eligibility and identity; observed industry enrichment; accepted price and attribute history | `INT_MARKET__REFERENCE_DAILY`, `INT_MARKET__DAILY`, `INT_MARKET__SECURITY_HISTORY` |
 | `MARTS` | Calculate analytical measures and aggregates; build facts and dimensions | Shared `CALC_SECURITY_DAILY_MOMENTUM` helper, four dimensions, and four facts |
 | `SEEDS` | Inactive legacy constituent snapshots; not a current dependency | Legacy `RUSSELL3000_*` objects |
-| `ADMIN` | Operational ingestion state | `INGESTION_CHECKPOINTS` |
+| `ADMIN` | Operational ingestion state | `INGESTION_CHECKPOINTS`, `REFERENCE_MANIFEST`, `PRICE_REFRESH_MANIFEST` |
 
 This is a batch ELT design: extraction and landing occur before dbt executes
 business transformations inside Snowflake. Pre-load processing is limited to

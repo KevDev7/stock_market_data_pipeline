@@ -89,7 +89,7 @@ def prepare(cur):
     cur.execute(f"CREATE DATABASE {database} COMMENT='{OWNER_MARKER}'")
     assert_owned(cur,database)
     print('Created isolated database '+database,flush=True)
-    for schema in ['RAW','INTERMEDIATE','MARTS']:
+    for schema in ['RAW','ADMIN','INTERMEDIATE','MARTS']:
         cur.execute(f'CREATE SCHEMA {database}.{schema} CLONE MARKET.{schema}')
     cur.execute(f"SHOW TABLES LIKE 'CALC_SECURITY_DAILY_MOMENTUM' IN SCHEMA {database}.MARTS")
     if not cur.fetchall():
@@ -170,7 +170,7 @@ def verify_corrections(database):
         compare(w.cursor,database,'BASELINE')
         prices=database+'.RAW.DAILY_STOCKS_RAW'
         reference=database+'.RAW.REFERENCE_RAW'
-        manifest=database+'.RAW.REFERENCE_MANIFEST'
+        manifest=database+'.ADMIN.REFERENCE_MANIFEST'
         w.cursor.execute(f'''SELECT COUNT(*) FROM {reference}
             WHERE TRY_PARSE_JSON(RAW_PAYLOAD):ticker::STRING='ZZPREPUSH' ''')
         if w.cursor.fetchone()[0]:
@@ -267,8 +267,8 @@ def verify_full_build(database):
     w=SnowflakeClient()
     try:
         assert_owned(w.cursor,database)
-        for table in ['DAILY_STOCKS_RAW','REFERENCE_RAW','REFERENCE_MANIFEST']:
-            w.cursor.execute(f'CREATE OR REPLACE TABLE {database}.RAW.{table} CLONE MARKET.RAW.{table}')
+        for table in ['RAW.DAILY_STOCKS_RAW','RAW.REFERENCE_RAW','ADMIN.REFERENCE_MANIFEST']:
+            w.cursor.execute(f'CREATE OR REPLACE TABLE {database}.{table} CLONE MARKET.{table}')
         run_dbt(database,[],full_refresh=True,action='build')
         results=json.loads((ROOT/'.cache'/'prepush'/database/'target'/'run_results.json').read_text())['results']
         summary={'models':sum(r['unique_id'].startswith('model.') for r in results),

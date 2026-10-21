@@ -31,6 +31,71 @@ Airflow stores its reference cache in the mounted logs/.cache directory.
 Rows also store source counts, inserted counts, S3 bucket and key, ETag, and
 SHA-256 checksum. Completed dates are skipped by later runs.
 
+`ADMIN.REFERENCE_MANIFEST` records completed ticker catalog and company overview
+loads by source/date, along with row counts, S3 keys, and archive checksums. It is
+committed in the same transaction as the matching raw reference replacement,
+including successful requests returning zero rows. dbt reads this manifest to
+check that parsing preserves complete catalogs; dbt does not create the table.
+
+`ADMIN.PRICE_REFRESH_MANIFEST` records campaign/date completion for deliberate
+historical price refreshes. It is separate from normal daily price checkpoints.
+All three metadata tables are application-owned; they are not processing layers.
+The existing manifests were moved on 2026-10-21; see the
+[migration verification](ingestion-metadata-migration-results.json).
+
+## Move Ingestion Manifests to ADMIN
+
+This changes table locations only. Keep all ingestion/refresh jobs stopped and
+the DAG paused until the updated code and dbt source definitions are in use.
+Use the existing application configuration and a role inheriting ownership of
+both manifests plus CREATE TABLE access in ADMIN. The migration does not change
+ownership or grant extra privileges. Local Airflow code is mounted from this
+checkout; do not start its containers during the cutover.
+
+Preview both moves, permissions, and table fingerprints:
+
+```bash
+python -m scripts.migrate_ingestion_metadata \
+  --report .cache/ingestion-metadata/preview.json
+```
+
+After reviewing the preview and confirming jobs are idle:
+
+```bash
+python -m scripts.migrate_ingestion_metadata --execute --idle-confirmed \
+  --journal .cache/ingestion-metadata/migration.json \
+  --report .cache/ingestion-metadata/result.json
+```
+
+The migration renames RAW.REFERENCE_MANIFEST and RAW.PRICE_REFRESH_MANIFEST into
+ADMIN without copying or rebuilding them. It verifies columns, all-row content
+fingerprints, row counts, ownership, and grants, and checks that checkpoints and
+source/mart row counts remain unchanged. Its private, mode-0600 journal records
+both original tables before the first rename. Keep these files Git-ignored.
+
+Snowflake DDL commits each rename separately. If interrupted, inspect both
+locations and rerun with the same journal: it verifies completed moves and only
+moves the remaining table. A destination conflict, changed baseline, missing
+table, or missing permission stops execution. Never delete a destination to make
+the command pass. Fresh environments use ingestion setup rather than migration.
+
+Run unit tests and dbt parsing before execution; afterward run only the catalog
+completeness test, with failure-row storage disabled, and check application and
+dashboard reads. No backfill or model rebuild is required.
+
+For recovery, stop writers, inspect the journal and actual table locations, and
+reverse only completed moves whose old RAW names are still unused:
+
+```sql
+ALTER TABLE MARKET.ADMIN.REFERENCE_MANIFEST RENAME TO MARKET.RAW.REFERENCE_MANIFEST;
+ALTER TABLE MARKET.ADMIN.PRICE_REFRESH_MANIFEST RENAME TO MARKET.RAW.PRICE_REFRESH_MANIFEST;
+```
+
+Restore the matching previous application/dbt code before restarting anything.
+Reverse renames are manual recovery steps, not an automatic rollback. Successful
+cutovers leave no compatibility views in RAW. Retain the completed migration
+journal as an audit record; use a new journal after any deliberately reversed cutover.
+
 ## Historical S3 Reconstruction
 
 The historical Snowflake raw table can reconstruct the S3 archive without
@@ -134,7 +199,7 @@ restarts. Bounded concurrency and retries do not bypass provider rate limits.
 The price refresh is necessary because later stock splits changed historical
 adjusted prices. It first creates RAW.DAILY_STOCKS_RAW_BEFORE_REFERENCE_20261007,
 then refreshes only retained overlap dates from 2023-11-20 through 2025-12-31.
-Original S3 run objects are never deleted. PRICE_REFRESH_MANIFEST commits per-date
+Original S3 run objects are never deleted. ADMIN.PRICE_REFRESH_MANIFEST commits per-date
 progress with the raw replacement, making retries skip completed refresh dates.
 Previously retained January 2026 prices remain outside the analytical window.
 

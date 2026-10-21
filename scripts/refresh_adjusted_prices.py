@@ -9,6 +9,7 @@ import logging
 
 from src.backfill_batches import land_batch
 from src.config import SNOWFLAKE
+from src.ingestion_metadata import ensure_manifest
 from src.reference import MassiveReferenceClient
 from src.snowflake_client import SnowflakeClient
 
@@ -28,12 +29,11 @@ def refresh(execute=False):
         logger.info('Adjusted-price refresh: %s retained dates; preview=%s',len(days),not execute)
         if not execute:
             return
+        ensure_manifest(w.cursor, database, 'PRICE_REFRESH_MANIFEST')
         backup=database+'.RAW.DAILY_STOCKS_RAW_BEFORE_REFERENCE_20261007'
         w.cursor.execute(f'CREATE TABLE IF NOT EXISTS {backup} CLONE {database}.RAW.DAILY_STOCKS_RAW')
         logger.info('Preserved pre-refresh source table in %s',backup)
-        w.cursor.execute(f'''CREATE TABLE IF NOT EXISTS {database}.RAW.PRICE_REFRESH_MANIFEST
-            (CAMPAIGN STRING,API_DATE DATE,S3_KEY STRING,SHA256 STRING,REFRESHED_AT TIMESTAMP_NTZ)''')
-        w.cursor.execute(f'SELECT API_DATE FROM {database}.RAW.PRICE_REFRESH_MANIFEST WHERE CAMPAIGN=%s',(CAMPAIGN,))
+        w.cursor.execute(f'SELECT API_DATE FROM {database}.ADMIN.PRICE_REFRESH_MANIFEST WHERE CAMPAIGN=%s',(CAMPAIGN,))
         completed={str(r[0]) for r in w.cursor.fetchall()}
         pending=[day for day in days if day not in completed]
         def extract(day):
