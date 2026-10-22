@@ -77,7 +77,7 @@ def snowflake_inventory():
         stage_settings = {
             name: [r for r in query(cur, f'DESC STAGE {db}.RAW.{quote(name)}')
                    if r['parent_property'] in ['STAGE_FILE_FORMAT', 'DIRECTORY']]
-            for name in ['POLYGON_RAW_STAGE', 'MASSIVE_REFERENCE_STAGE']
+            for name in ['POLYGON_RAW_STAGE', 'POLYGON_REFERENCE_STAGE']
         }
         counts = query(cur, f"SELECT TABLE_SCHEMA,TABLE_NAME,ROW_COUNT FROM {db}.INFORMATION_SCHEMA.TABLES "
                        "WHERE TABLE_SCHEMA IN ('RAW','MARTS') ORDER BY TABLE_SCHEMA,TABLE_NAME")
@@ -112,10 +112,10 @@ def snowflake_inventory():
             retention_days=int(db_retention['value']) if db_retention['level'] == 'DATABASE' else None,
             raw_retention_days=int(raw_retention['value']) if raw_retention['level'] == 'SCHEMA' else None,
             raw_schema_name='RAW', raw_schema_comment=raw_settings['comment'], archive_bucket=AWS['s3_bucket'],
-            price_prefix=AWS['s3_prefix'], reference_prefix='raw/massive/reference',
+            price_prefix=AWS['s3_prefix'], reference_prefix='raw/polygon/reference',
             storage_role_arn=integration['STORAGE_AWS_ROLE_ARN'], storage_integration_name='STOCK_MARKET_S3_INTEGRATION',
             storage_integration_comment=integration['COMMENT'], storage_external_id=integration['STORAGE_AWS_EXTERNAL_ID'],
-            price_stage_name='POLYGON_RAW_STAGE', reference_stage_name='MASSIVE_REFERENCE_STAGE',
+            price_stage_name='POLYGON_RAW_STAGE', reference_stage_name='POLYGON_REFERENCE_STAGE',
             file_format_name='POLYGON_NDJSON_GZIP',
             warehouses={'dashboard': dict(name=warehouse['name'], size=warehouse['size'].upper().replace('X-SMALL','XSMALL'),
                 auto_suspend=warehouse['auto_suspend'], auto_resume=warehouse['auto_resume'] == 'true',

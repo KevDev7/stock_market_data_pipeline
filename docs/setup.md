@@ -5,7 +5,7 @@
 - Docker and Docker Compose
 - AWS and Snowflake accounts; provision infrastructure with Terraform for a new environment
 - For normal runs, the existing Snowflake database/warehouse/role and versioned S3 archive
-- A Massive.com/Polygon.io API key when resuming source ingestion
+- A Polygon.io API key when resuming source ingestion
 - Python 3 for optional local commands
 
 ## Environment
@@ -18,7 +18,9 @@ cp .env.example .env
 
 Set the provider, Snowflake, S3, stage, and private-key values documented
 in `.env.example`. Historical `POLYGON_*` names and `api.polygon.io` remain
-supported after the provider's Massive.com rebrand.
+supported. Project-controlled provider names consistently use Polygon.
+Existing installations using legacy reference names must complete the
+[Polygon naming migration](polygon-naming-migration.md) before resuming ingestion.
 
 Store only the dedicated ingestion profile in these Git-ignored files:
 
@@ -95,7 +97,7 @@ dbt parse --profiles-dir .
 ```
 
 Legacy Russell CSV seeds are disabled and retained only for provenance. Ingest
-dated Massive reference data with `python -m scripts.backfill_reference` from
+dated Polygon reference data with `python -m scripts.backfill_reference` from
 the repository root; see the operations guide for validation and cutover.
 
 ## Streamlit

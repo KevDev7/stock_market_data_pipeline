@@ -28,7 +28,7 @@
         <mxCell id="layer-MARTS" parent="1" style="shape=rectangle;fillColor=#ffffff;strokeColor=#252525;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontColor=#252525;strokeWidth=1.2;" value="" vertex="1">
           <mxGeometry height="340" width="210" x="1330" y="250" as="geometry" />
         </mxCell>
-        <mxCell id="massive-provider" parent="1" style="shape=rectangle;fillColor=#ffffff;strokeColor=#252525;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontColor=#252525;strokeWidth=1.2;" value="" vertex="1">
+        <mxCell id="polygon-provider" parent="1" style="shape=rectangle;fillColor=#ffffff;strokeColor=#252525;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontColor=#252525;strokeWidth=1.2;" value="" vertex="1">
           <mxGeometry height="386" width="177" x="34" y="254" as="geometry" />
         </mxCell>
         <mxCell id="price-pull" edge="1" parent="1" source="source-prices" style="edgeStyle=none;rounded=0;html=1;endArrow=classic;endFill=1;strokeColor=#252525;strokeWidth=1.5;fontSize=16;fontFamily=Arial;exitX=1.0;exitY=0.5;exitPerimeter=0;entryX=0.0;entryY=0.5;entryPerimeter=0;" target="extract-job" value="">
@@ -257,10 +257,10 @@
         <mxCell id="warehouse-title" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=20;fontColor=#252525;strokeWidth=1.2;" value="Data Warehouse" vertex="1">
           <mxGeometry height="29" width="940" x="610" y="181" as="geometry" />
         </mxCell>
-        <mxCell id="massive-title" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontColor=#252525;strokeWidth=1.2;fontStyle=1;" value="Massive" vertex="1">
+        <mxCell id="polygon-title" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontColor=#252525;strokeWidth=1.2;fontStyle=1;" value="Polygon" vertex="1">
           <mxGeometry height="27" width="177" x="34" y="266" as="geometry" />
         </mxCell>
-        <mxCell id="massive-subtitle" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=15;fontColor=#252525;strokeWidth=1.2;" value="Market Data Provider" vertex="1">
+        <mxCell id="polygon-subtitle" parent="1" style="shape=rectangle;strokeColor=none;fillColor=none;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=15;fontColor=#252525;strokeWidth=1.2;" value="Market Data Provider" vertex="1">
           <mxGeometry height="24" width="177" x="34" y="292" as="geometry" />
         </mxCell>
         <mxCell id="source-prices" parent="1" style="shape=rectangle;fillColor=#ffffff;strokeColor=#252525;rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=16;fontColor=#252525;strokeWidth=1.2;spacingLeft=36;" value="Daily Stock&lt;br&gt;Prices" vertex="1">

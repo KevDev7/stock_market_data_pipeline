@@ -90,7 +90,7 @@ class Diagram:
                        for name, body in ICON_CONTENT.items())
         parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}" role="img" aria-labelledby="title desc">',
                  '<title id="title">Stock Market Pipeline — Five-Layer Data Warehouse Architecture</title>',
-                 '<desc id="desc">Three Massive REST API datasets are pulled through shared extraction, archived in S3, and loaded into Snowflake RAW. STAGING, INTERMEDIATE, and MARTS prepare data for one Stock Market Dashboard BI Project.</desc>',
+                 '<desc id="desc">Three Polygon REST API datasets are pulled through shared extraction, archived in S3, and loaded into Snowflake RAW. STAGING, INTERMEDIATE, and MARTS prepare data for one Stock Market Dashboard BI Project.</desc>',
                  '<rect width="100%" height="100%" fill="#ffffff"/>',
                  f'<defs>{defs}<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10L3 5Z" fill="{INK}"/></marker></defs>']
         # Containers go behind all edges; components and labels cover edge runs.
@@ -253,9 +253,9 @@ def build_diagram():
     d.box("cloud-symbol", 767, 145, 45, 42, kind="icon", icon="cloud", icon_color="#3986b2")
     d.box("warehouse-title", 740, 181, 940, 29, ["Data Warehouse"], kind="text", font=20)
 
-    d.box("massive-provider", 164, 254, 177, 386, kind="container")
-    d.box("massive-title", 164, 266, 177, 27, ["Massive"], kind="text", bold=True, font=18)
-    d.box("massive-subtitle", 164, 292, 177, 24, ["Market Data Provider"], kind="text", font=15)
+    d.box("polygon-provider", 164, 254, 177, 386, kind="container")
+    d.box("polygon-title", 164, 266, 177, 27, ["Polygon"], kind="text", bold=True, font=18)
+    d.box("polygon-subtitle", 164, 292, 177, 24, ["Market Data Provider"], kind="text", font=15)
     d.box("source-prices", 176, 330, 153, 68, ["Daily Stock", "Prices"], icon="file", font=16)
     d.box("source-catalog", 176, 438, 153, 68, ["Ticker", "Catalog"], icon="file", font=16)
     d.box("source-overview", 176, 546, 153, 68, ["Company", "Overview"], icon="file", font=16)

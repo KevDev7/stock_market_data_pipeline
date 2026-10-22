@@ -24,10 +24,10 @@ resource "snowflake_storage_integration_aws" "archive" {
   storage_provider        = "S3"
   storage_aws_role_arn    = var.storage_role_arn
   storage_aws_external_id = var.storage_external_id
-  storage_allowed_locations = [
+  storage_allowed_locations = distinct(concat([
     "s3://${var.archive_bucket}/${trim(var.price_prefix, "/")}/",
     "s3://${var.archive_bucket}/${trim(var.reference_prefix, "/")}/",
-  ]
+  ], [for prefix in var.additional_reference_prefixes : "s3://${var.archive_bucket}/${trim(prefix, "/")}/"]))
   lifecycle {
     prevent_destroy = true
     # Preserve the generated trust identity rather than resetting it on import.

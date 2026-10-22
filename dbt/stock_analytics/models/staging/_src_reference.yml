@@ -5,7 +5,7 @@ sources:
     schema: RAW
     tables:
       - name: REFERENCE_RAW
-        description: Untouched Massive reference responses with operational envelopes.
+        description: Untouched Polygon reference responses with operational envelopes.
   - name: admin_ingestion
     database: "{{ env_var('SNOWFLAKE_DATABASE', 'MARKET') }}"
     schema: ADMIN

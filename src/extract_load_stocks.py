@@ -1,5 +1,5 @@
 # src/extract_load_stocks.py
-# Pipeline entrypoint for Polygon.io/Massive.com extraction and raw loading.
+# Pipeline entrypoint for Polygon.io extraction and raw loading.
 
 import logging
 import datetime as dt
@@ -44,7 +44,7 @@ def latest_completed_trading_day(today=None):
 
 def ingest_raw_stock_data(years_back=2, days_back_override=None):
     """
-    Fetch Polygon.io/Massive.com grouped daily data, archive it in S3, load it into
+    Fetch Polygon.io grouped daily data, archive it in S3, load it into
     Snowflake RAW, and record ingestion checkpoints.
     """
     run_id = pendulum.now().strftime("%Y%m%d_%H%M%S")

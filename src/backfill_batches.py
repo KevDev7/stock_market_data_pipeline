@@ -15,6 +15,7 @@ from src.load import build_raw_landing_dataframe
 from src.reference import landing_rows
 from src.reference_load import REFERENCE_PREFIX, SOURCES
 from src.s3_client import S3RawClient
+from src.provider_names import canonical_source_sql
 
 
 def archive_item(item):
@@ -53,7 +54,7 @@ def land_batch(warehouse, items, prices=False, workers=8, refresh_campaign=None)
     if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*',database):
         raise ValueError('Invalid database')
     table=database+'.RAW.'+('DAILY_STOCKS_RAW' if prices else 'REFERENCE_RAW')
-    stage=SNOWFLAKE['s3_stage'] if prices else database+'.RAW.MASSIVE_REFERENCE_STAGE'
+    stage=SNOWFLAKE['s3_stage'] if prices else database+'.RAW.POLYGON_REFERENCE_STAGE'
     if not all(re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*',part) for part in stage.split('.')):
         raise ValueError('Invalid stage')
     prefix=AWS['s3_prefix'].strip('/') if prices else REFERENCE_PREFIX
@@ -73,7 +74,7 @@ def land_batch(warehouse, items, prices=False, workers=8, refresh_campaign=None)
         if paths:
             cur.execute(f'''COPY INTO {temp} (API_DATE,RUN_ID,SOURCE,RAW_PAYLOAD,INGESTED_AT)
                 FROM (SELECT TRY_TO_DATE($1:API_DATE::STRING),$1:RUN_ID::STRING,
-                $1:SOURCE::STRING,$1:RAW_PAYLOAD::STRING,TRY_TO_TIMESTAMP_NTZ($1:INGESTED_AT::STRING)
+                {canonical_source_sql('$1:SOURCE::STRING')},$1:RAW_PAYLOAD::STRING,TRY_TO_TIMESTAMP_NTZ($1:INGESTED_AT::STRING)
                 FROM @{stage}) FILES=({','.join(paths)})
                 FILE_FORMAT=(TYPE=JSON COMPRESSION=AUTO) ON_ERROR=ABORT_STATEMENT''')
         cur.execute(f'SELECT API_DATE,SOURCE,COUNT(*) FROM {temp} GROUP BY 1,2')

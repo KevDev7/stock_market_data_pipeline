@@ -20,8 +20,8 @@ def verify(w,prefix='CANDIDATE_'):
         start_date='2022-12-29',end_date='2025-12-31').index}
     report_dates={d for d in expected if d>='2024-01-01'}
     raw={str(r[0]) for r in query('SELECT DISTINCT API_DATE FROM MARKET.RAW.DAILY_STOCKS_RAW')}
-    catalogs={str(r[0]) for r in query("SELECT API_DATE FROM MARKET.ADMIN.REFERENCE_MANIFEST WHERE SOURCE='massive_ticker_catalog'")}
-    observed={str(r[0]) for r in query("SELECT API_DATE FROM MARKET.ADMIN.REFERENCE_MANIFEST WHERE SOURCE='massive_ticker_overview'")}
+    catalogs={str(r[0]) for r in query("SELECT API_DATE FROM MARKET.ADMIN.REFERENCE_MANIFEST WHERE SOURCE='polygon_ticker_catalog'")}
+    observed={str(r[0]) for r in query("SELECT API_DATE FROM MARKET.ADMIN.REFERENCE_MANIFEST WHERE SOURCE='polygon_ticker_overview'")}
     quarterly={str(d) for d in reference_dates('2024-01-01','2025-12-31')}
     cur.execute("SELECT API_DATE FROM MARKET.ADMIN.PRICE_REFRESH_MANIFEST WHERE CAMPAIGN='reference_migration_20261007'")
     refreshed={str(r[0]) for r in cur.fetchall()}

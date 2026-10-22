@@ -10,7 +10,7 @@ import logging
 from src.backfill_batches import land_batch
 from src.config import SNOWFLAKE
 from src.ingestion_metadata import ensure_manifest
-from src.reference import MassiveReferenceClient
+from src.reference import PolygonReferenceClient
 from src.snowflake_client import SnowflakeClient
 
 logger=logging.getLogger(__name__)
@@ -18,7 +18,7 @@ CAMPAIGN='reference_migration_20261007'
 
 
 def refresh(execute=False):
-    api=MassiveReferenceClient('.cache/massive-reference.sqlite3',interval=0.02)
+    api=PolygonReferenceClient('.cache/polygon-reference.sqlite3',interval=0.02)
     w=SnowflakeClient()
     try:
         database=SNOWFLAKE['database']

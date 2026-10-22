@@ -1,5 +1,5 @@
 # src/load.py
-# Archives Polygon.io (now Massive.com) grouped daily data, then loads Snowflake RAW.
+# Archives Polygon.io grouped daily data, then loads Snowflake RAW.
 
 import json
 import logging
@@ -18,10 +18,10 @@ def archive_and_load_raw_data(
     df, date_str, run_id, snowflake_client=None, s3_client=None
 ):
     """
-    Archive extracted Polygon.io/Massive.com data, load it, and checkpoint it.
+    Archive extracted Polygon.io data, load it, and checkpoint it.
 
     Args:
-        df (pd.DataFrame): DataFrame returned by the Polygon.io/Massive.com API.
+        df (pd.DataFrame): DataFrame returned by the Polygon.io API.
         date_str (str): Trading date being processed (YYYY-MM-DD).
         run_id (str): Pipeline execution identifier.
         snowflake_client (SnowflakeClient | None): Optional existing client.

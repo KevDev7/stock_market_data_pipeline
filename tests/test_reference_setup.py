@@ -20,11 +20,11 @@ class ReferenceSetupTest(unittest.TestCase):
         self.integration = [
             ['ENABLED','Boolean','true','true'],
             ['STORAGE_PROVIDER','String','S3',''],
-            ['STORAGE_ALLOWED_LOCATIONS','List','s3://stock-bucket/raw/massive/reference/','[]'],
+            ['STORAGE_ALLOWED_LOCATIONS','List','s3://stock-bucket/raw/polygon/reference/','[]'],
             ['STORAGE_BLOCKED_LOCATIONS','List','','[]'],
         ]
         self.stage = [
-            ['STAGE_LOCATION','URL','String',json.dumps(['s3://stock-bucket/raw/massive/reference/']), ''],
+            ['STAGE_LOCATION','URL','String',json.dumps(['s3://stock-bucket/raw/polygon/reference/']), ''],
             ['STAGE_INTEGRATION','STORAGE_INTEGRATION','String','STOCK_MARKET_S3_INTEGRATION',''],
             ['STAGE_FILE_FORMAT','TYPE','String','JSON','CSV'],
             ['STAGE_FILE_FORMAT','COMPRESSION','String','AUTO','AUTO'],

@@ -50,7 +50,7 @@ icons or fonts are needed.
 ### Ingestion
 
 `src/extraction.py` requests grouped daily aggregates from Polygon.io (now
-Massive.com) with `adjusted=true`. The ingestion code adds four operational
+Polygon.io) with `adjusted=true`. The ingestion code adds four operational
 fields and keeps each source row as JSON in `RAW_PAYLOAD`:
 
 - `API_DATE`: requested market date
@@ -72,8 +72,8 @@ archive.
 
 ### Reference Sources
 
-Massive daily catalogs and quarterly issuer overviews use the same raw envelope
-and are archived under raw/massive/reference/<source>/api_date=.../run_id=....
+Polygon daily catalogs and quarterly issuer overviews use the same raw envelope
+and are archived under raw/polygon/reference/<source>/api_date=.../run_id=....
 `ADMIN.REFERENCE_MANIFEST` records complete source/date counts and archive checksums.
 Incomplete pagination or archive/COPY count mismatches fail before publication.
 
@@ -178,7 +178,7 @@ Nonnegative gain/loss sums are clamped at zero to remove floating-window
 cancellation residue. Relative volume uses floating division so very small
 positive ratios are not rounded to zero by fixed-scale division.
 
-This is dated historical metadata, not a strict as-known-then backtest: Massive
+This is dated historical metadata, not a strict as-known-then backtest: Polygon
 issuer overviews use reporting-period dates, and quarterly observations approximate
 change dates. The later appearance of data in a filing is not modeled.
 
@@ -285,5 +285,7 @@ duplicate work.
 - Docker Compose mounts the project AWS profile as read-only secrets.
 - Snowflake clients and Streamlit authenticate with RSA private keys.
 
-The source provider renamed Polygon.io to Massive.com in October 2025. Runtime
-identifiers keep the original name for compatibility and an accurate history.
+Active provider identifiers consistently use Polygon. Original archived bytes,
+historical verification records, and external provider URLs retain their original
+names. Replay translates legacy operational source labels without changing the
+archived payload or its checksum.

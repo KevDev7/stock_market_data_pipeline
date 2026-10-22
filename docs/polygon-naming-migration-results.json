@@ -1,0 +1,181 @@
+{
+  "verified_on": "2026-10-22",
+  "status": "completed",
+  "project_provider_name": "Polygon",
+  "database": "MARKET",
+  "archive_migration": {
+    "visible_old_objects": 0,
+    "visible_polygon_reference_objects": 1179,
+    "retained_original_versions": 1179,
+    "recorded_delete_markers": 1179,
+    "all_destination_bytes_verified": true,
+    "permanent_original_deletions": 0,
+    "bytes_copied": 163822899,
+    "compressed_bytes_metadata_tags_and_encryption_preserved": true,
+    "raw_api_payloads_rewritten": false,
+    "new_prefix": "raw/polygon/reference/",
+    "new_source_folders": [
+      "polygon_ticker_catalog",
+      "polygon_ticker_overview"
+    ]
+  },
+  "snowflake": {
+    "stage": "MARKET.RAW.POLYGON_REFERENCE_STAGE",
+    "stage_renamed_in_place": true,
+    "metadata_fields_changed": [
+      "RAW.REFERENCE_RAW.SOURCE",
+      "ADMIN.REFERENCE_MANIFEST.SOURCE",
+      "ADMIN.REFERENCE_MANIFEST.S3_KEY"
+    ],
+    "normalized_reference_fingerprint": {
+      "rows": 4048278,
+      "hash": "2434747289450525162"
+    },
+    "normalized_manifest_fingerprint": {
+      "rows": 1179,
+      "hash": "9071050170747333962"
+    },
+    "protected_fingerprints_unchanged": {
+      "RAW.DAILY_STOCKS_RAW": {
+        "rows": 8270826,
+        "hash": "-1199863554041361664"
+      },
+      "ADMIN.INGESTION_CHECKPOINTS": {
+        "rows": 1871,
+        "hash": "1117669225553840340"
+      },
+      "ADMIN.PRICE_REFRESH_MANIFEST": {
+        "rows": 530,
+        "hash": "-779178200663326699"
+      },
+      "STAGING.STG_MARKET__CATALOG": {
+        "rows": 4001116,
+        "hash": "8344453909611449808"
+      },
+      "STAGING.STG_MARKET__ISSUER_OBSERVATIONS": {
+        "rows": 47162,
+        "hash": "-4497888379145618492"
+      },
+      "MARTS.DIM_DATE": {
+        "rows": 502,
+        "hash": "1504892162108364123"
+      },
+      "MARTS.DIM_SECTOR": {
+        "rows": 71,
+        "hash": "6489533784219766161"
+      },
+      "MARTS.DIM_SECURITY": {
+        "rows": 6543,
+        "hash": "-6044275658173918343"
+      },
+      "MARTS.DIM_SECURITY_HISTORY": {
+        "rows": 8550,
+        "hash": "-3026412736550918187"
+      },
+      "MARTS.FCT_MARKET_DAILY_BREADTH": {
+        "rows": 502,
+        "hash": "-6565431744335989860"
+      },
+      "MARTS.FCT_SECTOR_DAILY_BREADTH": {
+        "rows": 35141,
+        "hash": "6963001126195705485"
+      },
+      "MARTS.FCT_SECURITY_CURRENT_SNAPSHOT": {
+        "rows": 5159,
+        "hash": "8566135975518156439"
+      },
+      "MARTS.FCT_SECURITY_DAILY_MOMENTUM": {
+        "rows": 2567657,
+        "hash": "268700412702171465"
+      },
+      "MARTS.CALC_SECURITY_DAILY_MOMENTUM": {
+        "rows": 3908149,
+        "hash": "-2578084313861270403"
+      }
+    },
+    "view_grants_preserved": true,
+    "staging_views_recreated": 2,
+    "analytical_models_rebuilt": 0,
+    "application_checks": {
+      "completed_dates": {
+        "polygon_ticker_catalog": 754,
+        "polygon_ticker_overview": 425
+      },
+      "known_issuers": 6417,
+      "completed_price_dates": 762,
+      "raw_reference_by_source": {
+        "polygon_ticker_catalog": 4001116,
+        "polygon_ticker_overview": 47162
+      }
+    },
+    "dashboard": {
+      "status": "passed",
+      "role": "STREAMLIT_DASHBOARD_ROLE",
+      "published_marts_read": 8,
+      "credential_source": "existing_dedicated_project_key"
+    },
+    "available_query_history_audit": {
+      "query_history_rows_reviewed": 256,
+      "operational_metadata_update_statements": 2,
+      "unexpected_data_writes": 0,
+      "user_altering_statements": 0,
+      "stage_names": [
+        "POLYGON_RAW_STAGE",
+        "POLYGON_REFERENCE_STAGE"
+      ]
+    }
+  },
+  "cache": {
+    "responses_preserved": 52440,
+    "logical_fingerprint": "69f05b39de29e33cd8f26969374d8cb2b8fa1dd0a79cdf85b8269ef679e76def",
+    "backup_method": "SQLite backup API with logical content comparison",
+    "active_filename": "polygon-reference.sqlite3",
+    "original_retained": true
+  },
+  "verification": {
+    "python_unit_tests_passed": 133,
+    "dbt_parse": "passed",
+    "dbt_reference_tests_passed": 5,
+    "dbt_failure_row_storage": false,
+    "terraform_formatting_and_all_three_validations": "passed",
+    "final_terraform_plans": {
+      "bootstrap": {
+        "resources": 5,
+        "changes": 0
+      },
+      "aws": {
+        "resources": 8,
+        "changes": 0
+      },
+      "snowflake": {
+        "resources": 23,
+        "changes": 0
+      }
+    },
+    "terraform_imports_replacements_creations_or_deletions": 0,
+    "api_smoke_checks": {
+      "configured_host": "api.polygon.io",
+      "daily_stock_prices_http": 200,
+      "ticker_catalog_http": 200,
+      "company_overview_http": 200,
+      "responses_archived_or_loaded": false
+    },
+    "diagram": "Polygon label updated; geometry, styles, connections, and other labels unchanged; native Draw.io PNG/SVG exports inspected"
+  },
+  "boundaries": {
+    "bulk_source_extraction_or_backfill": false,
+    "raw_provider_payload_or_price_data_changes": false,
+    "credential_rotation": false,
+    "dashboard_deployment": false,
+    "dag_activation": false,
+    "orchestration": "remained stopped",
+    "commit_or_push_performed_during_migration": false
+  },
+  "historical_name_exceptions": [
+    "Original archive bytes and recoverable versions",
+    "Original cache backup and provider-returned pagination URLs",
+    "Legacy replay mappings and migration/recovery records",
+    "Historical verification records, backup schemas, retired templates, and official provider URLs"
+  ],
+  "private_recovery_journal": ".cache/polygon-naming/migration.json"
+}

@@ -1,7 +1,7 @@
 # Stock Market Data Analytics Pipeline
 
 A production-style batch ELT pipeline for historical U.S.-listed stock analytics.
-Daily OHLCV data flows from Polygon.io (now Massive.com) through an Amazon S3
+Daily OHLCV data flows from Polygon.io through an Amazon S3
 raw archive into Snowflake, where dbt builds tested dimensional marts used
 by a hosted Streamlit dashboard.
 
@@ -18,7 +18,7 @@ by a hosted Streamlit dashboard.
 ## Data Architecture
 
 <p align="center">
-  <img src="assets/stock-market-architecture.png" width="100%" alt="Stock market pipeline architecture: Massive API sources, S3 ingestion archive, four Snowflake processing layers, and one dashboard">
+  <img src="assets/stock-market-architecture.png" width="100%" alt="Stock market pipeline architecture: Polygon API sources, S3 ingestion archive, four Snowflake processing layers, and one dashboard">
 </p>
 
 ## Vendor Architecture
@@ -33,7 +33,7 @@ four processing layers, with that work consolidated into `MARTS`.
 
 | Concern | Technology | Role |
 |---|---|---|
-| Source | Polygon.io / Massive.com | Grouped daily prices, dated ticker catalogs, and issuer overviews |
+| Source | Polygon.io | Grouped daily prices, dated ticker catalogs, and issuer overviews |
 | Raw archive | Amazon S3 | Replayable source JSON |
 | Warehouse | Snowflake | Raw landing, transformation compute, and dimensional marts |
 | Transformation | dbt Core | SQL models, incremental loads, SCD Type 2, and tests |
@@ -106,7 +106,7 @@ The four legacy CSV seeds remain as inactive provenance, not an analytical input
 ## Quick Start
 
 Prerequisites: Docker Compose, Snowflake, AWS credentials for the scoped
-ingestion identity, an RSA private key, and a Massive.com/Polygon.io API key if
+ingestion identity, an RSA private key, and a Polygon.io API key if
 source ingestion will be resumed.
 
 ```bash
@@ -125,10 +125,12 @@ provisioning a new S3/Snowflake integration or enabling the DAG.
 
 ## Vendor Naming
 
-Polygon.io rebranded as [Massive.com](https://massive.com/blog/polygon-is-now-massive)
-on October 30, 2025. Historical metadata, environment variables, S3 paths, and
-the supported `api.polygon.io` endpoint retain their original names because the
-historical data was ingested under the Polygon.io brand.
+This project consistently uses Polygon names for code, S3 paths, and Snowflake
+identifiers. The provider's current brand is
+[Massive](https://massive.com/blog/polygon-is-now-massive). The existing
+`api.polygon.io` connection and API key remain configured. Original archived
+bytes and historical verification records retain their original identifiers;
+the loader translates legacy source labels when replaying those files.
 
 ## License
 

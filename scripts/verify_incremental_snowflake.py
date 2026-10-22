@@ -196,7 +196,7 @@ def verify_corrections(database):
                  'share_class_figi':'PREPUSH_SHARE_TEST','cik':'PREPUSH-CIK'}
         overview={'ticker':'ZZPREPUSH','name':catalog['name'],'cik':catalog['cik'],
                   'sic_code':'3571','sic_description':'Fixture industry'}
-        for source,payload in [('massive_ticker_catalog',catalog),('massive_ticker_overview',overview)]:
+        for source,payload in [('polygon_ticker_catalog',catalog),('polygon_ticker_overview',overview)]:
             w.cursor.execute(f'''INSERT INTO {reference}
                 (API_DATE,RUN_ID,SOURCE,RAW_PAYLOAD,INGESTED_AT)
                 VALUES ('2025-12-31','prepush-fixture',%s,%s,CURRENT_TIMESTAMP())''',

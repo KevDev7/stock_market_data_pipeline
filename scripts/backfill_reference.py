@@ -1,4 +1,4 @@
-"""Resume Massive metadata and missing warmup prices without replacing retained prices.
+"""Resume Polygon metadata and missing warmup prices without replacing retained prices.
 
 Run from repository root: python -m scripts.backfill_reference
 Catalogs are daily; issuer overviews are quarterly plus first observed issuers.
@@ -11,7 +11,7 @@ import pandas as pd
 import pandas_market_calendars as mcal
 
 from src.backfill_batches import land_batch
-from src.reference import MassiveReferenceClient, reference_dates
+from src.reference import PolygonReferenceClient, reference_dates
 from src.reference_load import ReferenceWarehouse
 from src.snowflake_client import SnowflakeClient
 
@@ -23,15 +23,15 @@ def issuer_key(row):
 
 
 def backfill(start_date='2022-12-29', end_date='2025-12-31', analysis_start='2024-01-01',
-             analysis_end='2025-12-31', workers=8, interval=0.02, cache_path='.cache/massive-reference.sqlite3'):
-    api = MassiveReferenceClient(cache_path,interval=interval)
+             analysis_end='2025-12-31', workers=8, interval=0.02, cache_path='.cache/polygon-reference.sqlite3'):
+    api = PolygonReferenceClient(cache_path,interval=interval)
     warehouse = SnowflakeClient()
     reference = ReferenceWarehouse(warehouse)
     try:
         warehouse.ensure_objects_exist()
         reference.setup()
-        catalog_done = reference.completed('massive_ticker_catalog')
-        overview_done = reference.completed('massive_ticker_overview')
+        catalog_done = reference.completed('polygon_ticker_catalog')
+        overview_done = reference.completed('polygon_ticker_overview')
         known_issuers = reference.known_issuers()
         warehouse.cursor.execute('SELECT DISTINCT API_DATE FROM RAW.DAILY_STOCKS_RAW')
         price_done = {str(r[0]) for r in warehouse.cursor.fetchall()}
@@ -57,7 +57,7 @@ def backfill(start_date='2022-12-29', end_date='2025-12-31', analysis_start='202
                     land_batch(warehouse,price_items,prices=True,workers=workers)
                     logger.info('Added missing price batch (including warmup) dates=%s rows=%s',
                                 len(price_items),sum(len(i[0]) for i in price_items))
-                catalog_items = [(catalogs[day],day,'massive_ticker_catalog',len(catalogs[day]))
+                catalog_items = [(catalogs[day],day,'polygon_ticker_catalog',len(catalogs[day]))
                                  for day in batch_days if day not in catalog_done]
                 land_batch(warehouse,catalog_items,workers=workers)
                 logger.info('Archived complete catalog batch through=%s progress=%s/%s',
@@ -80,7 +80,7 @@ def backfill(start_date='2022-12-29', end_date='2025-12-31', analysis_start='202
                                 rows.append(record)
                             if done % 250 == 0:
                                 logger.info('Issuer overview progress date=%s completed=%s/%s',day,done,len(wanted))
-                        overview_items.append((rows,day,'massive_ticker_overview',len(wanted)))
+                        overview_items.append((rows,day,'polygon_ticker_overview',len(wanted)))
                         for key in wanted:
                             known_issuers[key] = min(day, known_issuers.get(key, day))
                         logger.info('Extracted issuer observations date=%s requested=%s returned=%s quarterly=%s',
@@ -98,7 +98,7 @@ def main():
     parser.add_argument('--end-date',default='2025-12-31')
     parser.add_argument('--workers',type=int,default=8)
     parser.add_argument('--interval',type=float,default=0.02)
-    parser.add_argument('--cache-path',default='.cache/massive-reference.sqlite3')
+    parser.add_argument('--cache-path',default='.cache/polygon-reference.sqlite3')
     parser.add_argument('--analysis-start',default='2024-01-01')
     parser.add_argument('--analysis-end',default='2025-12-31')
     args = parser.parse_args()

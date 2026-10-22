@@ -33,10 +33,10 @@ class MetadataSetupTest(unittest.TestCase):
         cursor.fetchall.return_value = [('2025-03-31',)]
         with patch('src.reference_load.SNOWFLAKE', {'database':'MARKET'}):
             warehouse = ReferenceWarehouse(Mock(cursor=cursor))
-            self.assertEqual(warehouse.completed('massive_ticker_catalog'), {'2025-03-31'})
+            self.assertEqual(warehouse.completed('polygon_ticker_catalog'), {'2025-03-31'})
         sql, params = cursor.execute.call_args.args
         self.assertIn('MARKET.ADMIN.REFERENCE_MANIFEST', sql)
-        self.assertEqual(params, ('massive_ticker_catalog',))
+        self.assertEqual(params, ('polygon_ticker_catalog',))
 
     def test_empty_reference_load_commits_raw_and_admin_manifest_together(self):
         cursor = Mock()
@@ -44,10 +44,10 @@ class MetadataSetupTest(unittest.TestCase):
         with patch('src.reference_load.SNOWFLAKE', {'database':'MARKET'}), \
              patch('src.reference_load.S3RawClient') as archive:
             archive.return_value.archive_dataframe.return_value = {
-                'key':'raw/massive/reference/massive_ticker_overview/api_date=2025-01-02/test.ndjson.gz',
+                'key':'raw/polygon/reference/polygon_ticker_overview/api_date=2025-01-02/test.ndjson.gz',
                 'sha256':'fixture'}
             warehouse = ReferenceWarehouse(Mock(cursor=cursor))
-            warehouse.load([], '2025-01-02', 'massive_ticker_overview', requested_count=1)
+            warehouse.load([], '2025-01-02', 'polygon_ticker_overview', requested_count=1)
         sql = [c.args[0] for c in cursor.execute.call_args_list]
         self.assertFalse(any(s.startswith('COPY') for s in sql))
         deletes = [s for s in sql if s.startswith('DELETE')]
@@ -67,10 +67,10 @@ class MetadataSetupTest(unittest.TestCase):
         with patch('src.reference_load.SNOWFLAKE', {'database':'MARKET'}), \
              patch('src.reference_load.S3RawClient') as archive:
             archive.return_value.archive_dataframe.return_value = {
-                'key':'raw/massive/reference/massive_ticker_overview/test.ndjson.gz', 'sha256':'fixture'}
+                'key':'raw/polygon/reference/polygon_ticker_overview/test.ndjson.gz', 'sha256':'fixture'}
             warehouse = ReferenceWarehouse(Mock(cursor=cursor))
             with self.assertRaisesRegex(RuntimeError, 'manifest write failed'):
-                warehouse.load([], '2025-01-02', 'massive_ticker_overview')
+                warehouse.load([], '2025-01-02', 'polygon_ticker_overview')
         sql = [c.args[0] for c in cursor.execute.call_args_list]
         self.assertIn('ROLLBACK', sql)
         self.assertNotIn('COMMIT', sql)

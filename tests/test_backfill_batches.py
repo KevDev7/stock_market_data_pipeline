@@ -36,35 +36,35 @@ class BatchLandingTest(unittest.TestCase):
         self.assertIn('COMMIT',sql)
 
     def test_reference_batch_replaces_only_manifest_source_dates(self):
-        self.cursor.fetchall.return_value=[(dt.date(2024,1,2),'massive_ticker_catalog',1)]
-        self.run_batch([([{'ticker':'AAA'}],'2024-01-02','massive_ticker_catalog',1)])
+        self.cursor.fetchall.return_value=[(dt.date(2024,1,2),'polygon_ticker_catalog',1)]
+        self.run_batch([([{'ticker':'AAA'}],'2024-01-02','polygon_ticker_catalog',1)])
         deletes=[call for call in self.cursor.execute.call_args_list if call.args[0].startswith('DELETE')]
         self.assertEqual(len(deletes),2)
-        self.assertTrue(all(call.args[1]==['2024-01-02','massive_ticker_catalog'] for call in deletes))
+        self.assertTrue(all(call.args[1]==['2024-01-02','polygon_ticker_catalog'] for call in deletes))
         self.assertIn('COMMIT',self.statements())
         self.assertTrue(any('DELETE FROM ' in s and '.ADMIN.REFERENCE_MANIFEST' in s for s in self.statements()))
 
     def test_empty_successful_overview_still_records_manifest(self):
         self.cursor.fetchall.return_value=[]
-        self.run_batch([([],'2024-01-02','massive_ticker_overview',1)])
+        self.run_batch([([],'2024-01-02','polygon_ticker_overview',1)])
         self.assertFalse(any(s.startswith('COPY') for s in self.statements()))
         self.assertTrue(any('.ADMIN.REFERENCE_MANIFEST VALUES' in s for s in self.statements()))
 
     def test_archive_count_mismatch_cannot_change_raw_tables(self):
         self.cursor.fetchall.return_value=[]
         with self.assertRaisesRegex(ValueError,'count mismatch'):
-            self.run_batch([([{'ticker':'AAA'}],'2024-01-02','massive_ticker_catalog',1)])
+            self.run_batch([([{'ticker':'AAA'}],'2024-01-02','polygon_ticker_catalog',1)])
         self.assertNotIn('BEGIN',self.statements())
         self.assertFalse(any(s.startswith('DELETE') for s in self.statements()))
 
     def test_commit_failure_rolls_back(self):
-        self.cursor.fetchall.return_value=[(dt.date(2024,1,2),'massive_ticker_catalog',1)]
+        self.cursor.fetchall.return_value=[(dt.date(2024,1,2),'polygon_ticker_catalog',1)]
         def execute(sql,*args):
             if sql=='COMMIT':
                 raise RuntimeError('fixture commit failure')
         self.cursor.execute.side_effect=execute
         with self.assertRaises(RuntimeError):
-            self.run_batch([([{'ticker':'AAA'}],'2024-01-02','massive_ticker_catalog',1)])
+            self.run_batch([([{'ticker':'AAA'}],'2024-01-02','polygon_ticker_catalog',1)])
         self.assertIn('ROLLBACK',self.statements())
 
     def test_explicit_refresh_replaces_only_archived_dates_and_records_campaign(self):

@@ -8,6 +8,7 @@ import pandas as pd
 from botocore.exceptions import ClientError
 
 from src.config import AWS
+from src.provider_names import canonical_source
 
 
 class S3RawClient:
@@ -65,6 +66,8 @@ class S3RawClient:
         with gzip.GzipFile(fileobj=io.BytesIO(body), mode="rb") as stream:
             records = [json.loads(line) for line in stream if line.strip()]
         df = pd.DataFrame.from_records(records)
+        if 'SOURCE' in df.columns:
+            df['SOURCE'] = df['SOURCE'].map(canonical_source)
         if not df.empty:
             df["API_DATE"] = pd.to_datetime(df["API_DATE"]).dt.date
             df["INGESTED_AT"] = pd.to_datetime(df["INGESTED_AT"])

@@ -1,4 +1,4 @@
-"""Massive reference extraction. No analytical transformations belong here."""
+"""Polygon reference extraction. No analytical transformations belong here."""
 
 import datetime as dt
 import hashlib
@@ -27,7 +27,7 @@ def reference_dates(start_date, end_date):
     return sorted({sessions[0].date(), sessions[-1].date(), *last_by_quarter.values()})
 
 
-class MassiveReferenceClient:
+class PolygonReferenceClient:
     """Bearer authentication, complete pagination, bounded retries and durable cache.
 
     Cache responses by endpoint and query date so interrupted paid backfills do
@@ -35,7 +35,7 @@ class MassiveReferenceClient:
     """
 
     def __init__(self, cache_path, base_url=None, api_key=None, interval=0.05, session=None):
-        self.base = (base_url or API_BASE_URL or 'https://api.massive.com').rstrip('/')
+        self.base = (base_url or API_BASE_URL or 'https://api.polygon.io').rstrip('/')
         self.host = urlparse(self.base).hostname
         self.session = session or requests.Session()
         self.session.headers['Authorization'] = 'Bearer ' + (api_key or POLYGON_API_KEY or '')

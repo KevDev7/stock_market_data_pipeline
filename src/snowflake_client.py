@@ -82,7 +82,7 @@ class SnowflakeClient:
         require_metadata_migrated(self.cursor, database)
         self.cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {database}.ADMIN;")
 
-        # Raw Polygon.io/Massive.com landing table. dbt owns parsing and typing.
+        # Raw Polygon.io landing table. dbt owns parsing and typing.
         self.cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {SNOWFLAKE['schema']}.DAILY_STOCKS_RAW (
                 API_DATE DATE,

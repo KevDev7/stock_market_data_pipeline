@@ -169,7 +169,7 @@ class LayerModelTest(unittest.TestCase):
         self.db.execute("INSERT INTO raw_daily_stocks VALUES (?, ?, ?, ?)",
                         [date, ingested_at or dt.datetime(2026, 1, 1), "run-1", json.dumps(payload)])
 
-    def add_reference(self, date, payload, source="massive_ticker_catalog"):
+    def add_reference(self, date, payload, source="polygon_ticker_catalog"):
         self.db.execute("INSERT INTO raw_reference (API_DATE,SOURCE,INGESTED_AT,RAW_PAYLOAD) VALUES (?, ?, ?, ?)",
                         [date, source, dt.datetime(2026, 1, 1), json.dumps(payload)])
 
@@ -296,9 +296,9 @@ class LayerModelTest(unittest.TestCase):
         for i in range(2):
             self.add_price(start+dt.timedelta(days=i),10)
         self.add_reference(start,{"ticker":"AAA","cik":"CIK-AAA","sic_code":"3571"},
-                           "massive_ticker_overview")
+                           "polygon_ticker_overview")
         self.add_reference(start+dt.timedelta(days=1),{"ticker":"AAA","cik":"CIK-AAA","sic_code":"6021"},
-                           "massive_ticker_overview")
+                           "polygon_ticker_overview")
         self.build_inputs()
         self.build("int_market__daily")
         self.build_history()
@@ -482,7 +482,7 @@ class LayerModelTest(unittest.TestCase):
         self.add_price(dt.date(2025, 9, 18), 10)
         self.build_inputs()
         self.build_chain()
-        self.db.execute("DELETE FROM raw_reference WHERE SOURCE='massive_ticker_catalog'")
+        self.db.execute("DELETE FROM raw_reference WHERE SOURCE='polygon_ticker_catalog'")
         self.add_constituent(SEEDS[-1], "BBB")
         self.build_inputs()
         self.build_chain(incremental=True)

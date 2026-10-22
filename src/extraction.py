@@ -1,5 +1,5 @@
 # src/extraction.py
-# Fetches grouped daily aggregates from Polygon.io (now Massive.com).
+# Fetches grouped daily aggregates from Polygon.io.
 
 import logging
 import time
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def fetch_grouped_daily(date_str: str) -> pd.DataFrame:
     """
-    Fetch grouped daily data from Polygon.io (now Massive.com) for a given date.
+    Fetch grouped daily data from Polygon.io for a given date.
 
     Args:
         date_str (str): Date in 'YYYY-MM-DD' format.

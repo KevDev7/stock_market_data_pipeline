@@ -5,4 +5,4 @@ WITH counts AS (
 SELECT m.api_date,m.row_count,c.parsed_rows
 FROM {{ source('admin_ingestion','REFERENCE_MANIFEST') }} m
 LEFT JOIN counts c ON m.api_date=c.trade_date
-WHERE m.source='massive_ticker_catalog' AND m.row_count<>COALESCE(c.parsed_rows,0)
+WHERE m.source='polygon_ticker_catalog' AND m.row_count<>COALESCE(c.parsed_rows,0)

@@ -7,11 +7,11 @@ import pandas as pd
 
 from src.config import AWS, SNOWFLAKE
 from src.ingestion_metadata import ensure_manifest, require_metadata_migrated
+from src.provider_names import REFERENCE_PREFIX, REFERENCE_STAGE, canonical_source_sql
 from src.reference import landing_rows
 from src.s3_client import S3RawClient
 
-REFERENCE_PREFIX = 'raw/massive/reference'
-SOURCES = {'massive_ticker_catalog', 'massive_ticker_overview'}
+SOURCES = {'polygon_ticker_catalog', 'polygon_ticker_overview'}
 
 
 class ReferenceWarehouse:
@@ -21,7 +21,7 @@ class ReferenceWarehouse:
         self.database = SNOWFLAKE['database']
         if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*',self.database):
             raise ValueError('Invalid database identifier')
-        self.stage = self.database + '.RAW.MASSIVE_REFERENCE_STAGE'
+        self.stage = self.database + '.RAW.' + REFERENCE_STAGE
 
     def check_infrastructure(self):
         """Inspect Terraform-owned prerequisites without creating or altering them."""
@@ -81,7 +81,7 @@ class ReferenceWarehouse:
     def known_issuers(self):
         self.cursor.execute(f'''SELECT COALESCE(NULLIF(TRY_PARSE_JSON(RAW_PAYLOAD):cik::STRING,''),
             'TICKER:' || TRY_PARSE_JSON(RAW_PAYLOAD):ticker::STRING), MIN(API_DATE)
-            FROM {self.database}.RAW.REFERENCE_RAW WHERE SOURCE='massive_ticker_overview'
+            FROM {self.database}.RAW.REFERENCE_RAW WHERE SOURCE='polygon_ticker_overview'
             GROUP BY 1''')
         return {r[0]: str(r[1]) for r in self.cursor.fetchall()}
 
@@ -103,7 +103,7 @@ class ReferenceWarehouse:
             if rows:
                 self.cursor.execute(f'''COPY INTO {temp} (API_DATE,RUN_ID,SOURCE,RAW_PAYLOAD,INGESTED_AT)
                     FROM (SELECT TRY_TO_DATE($1:API_DATE::STRING),$1:RUN_ID::STRING,
-                    $1:SOURCE::STRING,$1:RAW_PAYLOAD::STRING,TRY_TO_TIMESTAMP_NTZ($1:INGESTED_AT::STRING)
+                    {canonical_source_sql('$1:SOURCE::STRING')},$1:RAW_PAYLOAD::STRING,TRY_TO_TIMESTAMP_NTZ($1:INGESTED_AT::STRING)
                     FROM @{self.stage}/{stage_path})
                     FILE_FORMAT=(TYPE=JSON COMPRESSION=AUTO) ON_ERROR=ABORT_STATEMENT''')
             self.cursor.execute(f'SELECT COUNT(*) FROM {temp}')

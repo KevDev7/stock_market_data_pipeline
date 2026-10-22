@@ -20,6 +20,11 @@ variable "raw_schema_comment" { type = string }
 variable "archive_bucket" { type = string }
 variable "price_prefix" { type = string }
 variable "reference_prefix" { type = string }
+variable "additional_reference_prefixes" {
+  description = "Temporary scoped reference prefixes during an explicitly reviewed archive migration."
+  type        = list(string)
+  default     = []
+}
 variable "storage_role_arn" { type = string }
 variable "storage_integration_name" { type = string }
 variable "storage_integration_comment" { type = string }

@@ -35,7 +35,7 @@ def extract_reference_data():
     day=str(latest_completed_trading_day())
     backfill(start_date=day,end_date=day,
              analysis_start=STUDY_VARS['analysis_start'],analysis_end=STUDY_VARS['analysis_end'],
-             cache_path='/opt/airflow/logs/.cache/massive-reference.sqlite3')
+             cache_path='/opt/airflow/logs/.cache/polygon-reference.sqlite3')
 
 
 with DAG(
@@ -47,7 +47,7 @@ with DAG(
     max_active_runs=1,
     tags=["elt", "s3", "snowflake", "polygon", "dbt"],
     doc_md="""
-    Daily batch ELT pipeline for Polygon.io/Massive.com -> S3 -> Snowflake -> dbt.
+    Daily batch ELT pipeline for Polygon.io -> S3 -> Snowflake -> dbt.
     Steps:
       1) Extract + archive grouped daily aggregates in Amazon S3
       2) Load the archived object into RAW.DAILY_STOCKS_RAW

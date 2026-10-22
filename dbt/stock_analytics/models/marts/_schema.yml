@@ -54,17 +54,17 @@ models:
         tests:
           - not_null
       - name: company
-        description: "Company name from Massive dated reference data."
+        description: "Company name from Polygon dated reference data."
       - name: sector_name
         description: "Current sector name."
       - name: exchange
-        description: "Primary exchange from Massive dated reference data."
+        description: "Primary exchange from Polygon dated reference data."
       - name: currency
-        description: "Security currency from Massive dated reference data."
+        description: "Security currency from Polygon dated reference data."
 
   - name: dim_security_history
     description: |
-      Type 2 security history dimension built from Massive dated reference
+      Type 2 security history dimension built from Polygon dated reference
       snapshots.
 
       Grain: one row per security identity per validity period. This preserves

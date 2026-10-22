@@ -3,15 +3,15 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock
 
-from src.reference import MassiveReferenceClient, reference_dates
+from src.reference import PolygonReferenceClient, reference_dates
 
 
 class ReferenceTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.session = Mock(headers={})
-        self.client = MassiveReferenceClient(Path(self.temp.name)/'cache.db',
-            base_url='https://api.massive.com', api_key='secret-test-key', interval=0, session=self.session)
+        self.client = PolygonReferenceClient(Path(self.temp.name)/'cache.db',
+            base_url='https://api.polygon.io', api_key='secret-test-key', interval=0, session=self.session)
     def tearDown(self):
         self.client.close()
         self.temp.cleanup()
