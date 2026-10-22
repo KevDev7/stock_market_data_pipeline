@@ -35,7 +35,7 @@ helper deliberately refuses to overwrite an existing snapshot.
 |---|---|
 | `bootstrap` Terraform root | Separate private state bucket, encryption, versioning, public-access block, administrator-only/TLS policy |
 | `aws` Terraform root | Archive bucket settings, dedicated ingestion IAM user, reader IAM role, project policies/attachments |
-| `snowflake` Terraform root | MARKET database, RAW namespace, S3 integration, two external stages, JSON file format, dedicated dashboard warehouse/role/service user, explicit active-mart grants and user-role membership |
+| `snowflake` Terraform root | MARKET database, RAW namespace, S3 integration, three external stages, JSON file format, dedicated dashboard warehouse/role/service user, explicit active-mart grants and user-role membership |
 | Ingestion setup | Raw tables, checkpoints, manifests, ADMIN namespace; temporary landing tables |
 | dbt and cutover scripts | Transformed schemas, tables, views; grant mirroring during schema swaps |
 | Existing account setup | Shared COMPUTE_WH, AIRFLOW_USER, administrative roles, account-wide PUBLIC grants, existing resource monitor |
@@ -45,6 +45,16 @@ not an exclusive list of everything it may possess. Do not replace them with
 account-wide or `all_privileges` grants. The existing dashboard resource monitor
 is referenced without changing its budget or triggers; provision an equivalent
 monitor explicitly when setting up another account.
+
+The later [dataset-folder migration](../../docs/s3-layout-migration.md) preserves
+the price stage, renames the shared reference stage in place to
+`POLYGON_TICKER_CATALOG_STAGE`, and creates `POLYGON_COMPANY_OVERVIEW_STAGE`.
+There are now 24 managed Snowflake resources: 23 adopted resources plus that one
+new stage. Final integration and IAM access is limited to the three dataset
+prefixes, not the bucket root. The migration-only `manage_overview_stage=false`
+switch leaves the old two-stage environment intact during preparation; keep it
+true after cutover. `adopt_overview_stage` is false for initial creation and true
+only when importing an already existing overview stage into another state.
 
 The current private Snowflake inputs explicitly set `manage_service_users=true`.
 The variable remains default-off for other deployments. Terraform now manages

@@ -1,5 +1,10 @@
 # Polygon naming migration
 
+This records the earlier provider-naming migration. Its intermediate archive
+paths were subsequently simplified by the [dataset-folder migration](s3-layout-migration.md).
+Use the current setup guide for new environments; these historical mappings and
+recovery instructions remain accurate for the earlier migration journal.
+
 The existing project was migrated on 2026-10-22. See the
 [verification record](polygon-naming-migration-results.json).
 

@@ -49,8 +49,8 @@ icons or fonts are needed.
 
 ### Ingestion
 
-`src/extraction.py` requests grouped daily aggregates from Polygon.io (now
-Polygon.io) with `adjusted=true`. The ingestion code adds four operational
+`src/extraction.py` requests grouped daily aggregates from Polygon.io
+with `adjusted=true`. The ingestion code adds four operational
 fields and keeps each source row as JSON in `RAW_PAYLOAD`:
 
 - `API_DATE`: requested market date
@@ -61,21 +61,30 @@ fields and keeps each source row as JSON in `RAW_PAYLOAD`:
 `src/load.py` writes these rows as gzip NDJSON to:
 
 ```text
-s3://<bucket>/raw/polygon/grouped-daily/
-  api_date=<date>/run_id=<run-id>/daily_stocks_raw.ndjson.gz
+s3://<bucket>/daily-stock-prices/
+  api_date=<date>/daily_stocks_raw.ndjson.gz
 ```
 
 After archival succeeds, Snowflake loads the same object through the external
 stage. The load atomically replaces the matching `API_DATE` in
 `RAW.DAILY_STOCKS_RAW`, making retries idempotent. S3 remains the replayable file
-archive.
+archive. Each dataset/date has one current file. Run IDs remain in records,
+logs, and object metadata, rather than in folder names. S3 versioning preserves
+replaced copies. A tracking row's checksum describes that attempt's bytes;
+after an explicit refresh its path can refer to a newer current file. Historical
+recovery uses S3 versions rather than assuming every old tracking path is current.
 
 ### Reference Sources
 
 Polygon daily catalogs and quarterly issuer overviews use the same raw envelope
-and are archived under raw/polygon/reference/<source>/api_date=.../run_id=....
+and are archived under `ticker-catalog/api_date=.../` and
+`company-overview/api_date=.../`, respectively. Each dataset has a
+scoped external stage; all files remain gzip NDJSON. These folders describe the
+datasets, not their collection frequency or warehouse modeling role.
 `ADMIN.REFERENCE_MANIFEST` records complete source/date counts and archive checksums.
-Incomplete pagination or archive/COPY count mismatches fail before publication.
+Incomplete pagination or archive/COPY count or run-identity mismatches fail before
+publication. Keep manual refresh/backfill writers separate from scheduled runs;
+Airflow already permits only one active DAG run.
 
 The migration refreshes retained split-adjusted prices to the same retrieval
 vintage as newly fetched warmup prices. Old S3 versions remain intact and a
@@ -279,8 +288,8 @@ duplicate work.
 
 ## Security Boundaries
 
-- The ingestion IAM user can list the grouped-daily and reference prefixes and read/write their
-  objects but cannot delete them.
+- The ingestion IAM user can list the `daily-stock-prices/`, `ticker-catalog/`,
+  and `company-overview/` prefixes and read/write their objects but cannot delete them.
 - Snowflake assumes a dedicated read-only IAM role for those same prefixes.
 - Docker Compose mounts the project AWS profile as read-only secrets.
 - Snowflake clients and Streamlit authenticate with RSA private keys.

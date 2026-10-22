@@ -31,6 +31,14 @@ Airflow stores its reference cache in the mounted logs/.cache directory.
 Rows also store source counts, inserted counts, S3 bucket and key, ETag, and
 SHA-256 checksum. Completed dates are skipped by later runs.
 
+Archives use one current file per dataset/API date. Retrying or deliberately
+refreshing a date replaces that current file; S3 versioning preserves older
+copies. Run IDs remain in data and logs. Historical tracking checksums describe
+the original attempt, so use S3 versions when its checksum differs from the
+current file. See [date-only archive recovery](date-archive-migration.md).
+Stop scheduled ingestion before running a manual backfill or refresh. Loaders
+reject staged records from a different run before publishing them.
+
 `ADMIN.REFERENCE_MANIFEST` records completed ticker catalog and company overview
 loads by source/date, along with row counts, S3 keys, and archive checksums. It is
 committed in the same transaction as the matching raw reference replacement,

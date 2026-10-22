@@ -27,7 +27,8 @@ resource "snowflake_storage_integration_aws" "archive" {
   storage_allowed_locations = distinct(concat([
     "s3://${var.archive_bucket}/${trim(var.price_prefix, "/")}/",
     "s3://${var.archive_bucket}/${trim(var.reference_prefix, "/")}/",
-  ], [for prefix in var.additional_reference_prefixes : "s3://${var.archive_bucket}/${trim(prefix, "/")}/"]))
+    ], var.manage_overview_stage ? ["s3://${var.archive_bucket}/${trim(var.overview_prefix, "/")}/"] : [],
+  [for prefix in var.additional_reference_prefixes : "s3://${var.archive_bucket}/${trim(prefix, "/")}/"]))
   lifecycle {
     prevent_destroy = true
     # Preserve the generated trust identity rather than resetting it on import.
@@ -68,6 +69,29 @@ resource "snowflake_stage_external_s3" "reference" {
   schema              = snowflake_schema.raw.name
   name                = var.reference_stage_name
   url                 = "s3://${var.archive_bucket}/${trim(var.reference_prefix, "/")}/"
+  storage_integration = snowflake_storage_integration_aws.archive.name
+  directory {
+    enable = false
+  }
+  file_format {
+    json {
+      compression      = "AUTO"
+      binary_format    = "HEX"
+      date_format      = "AUTO"
+      time_format      = "AUTO"
+      timestamp_format = "AUTO"
+      null_if          = []
+    }
+  }
+  lifecycle { prevent_destroy = true }
+}
+
+resource "snowflake_stage_external_s3" "overview" {
+  count               = var.manage_overview_stage ? 1 : 0
+  database            = snowflake_database.market.name
+  schema              = snowflake_schema.raw.name
+  name                = var.overview_stage_name
+  url                 = "s3://${var.archive_bucket}/${trim(var.overview_prefix, "/")}/"
   storage_integration = snowflake_storage_integration_aws.archive.name
   directory {
     enable = false

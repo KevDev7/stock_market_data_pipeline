@@ -20,18 +20,20 @@ class ReferenceSetupTest(unittest.TestCase):
         self.integration = [
             ['ENABLED','Boolean','true','true'],
             ['STORAGE_PROVIDER','String','S3',''],
-            ['STORAGE_ALLOWED_LOCATIONS','List','s3://stock-bucket/raw/polygon/reference/','[]'],
+            ['STORAGE_ALLOWED_LOCATIONS','List','s3://stock-bucket/ticker-catalog/,s3://stock-bucket/company-overview/','[]'],
             ['STORAGE_BLOCKED_LOCATIONS','List','','[]'],
         ]
         self.stage = [
-            ['STAGE_LOCATION','URL','String',json.dumps(['s3://stock-bucket/raw/polygon/reference/']), ''],
+            ['STAGE_LOCATION','URL','String',json.dumps(['s3://stock-bucket/ticker-catalog/']), ''],
             ['STAGE_INTEGRATION','STORAGE_INTEGRATION','String','STOCK_MARKET_S3_INTEGRATION',''],
             ['STAGE_FILE_FORMAT','TYPE','String','JSON','CSV'],
             ['STAGE_FILE_FORMAT','COMPRESSION','String','AUTO','AUTO'],
         ]
 
     def configure(self):
-        self.cursor.fetchall.side_effect = [self.integration, self.stage, [], []]
+        overview = copy.deepcopy(self.stage)
+        overview[0][3] = json.dumps(['s3://stock-bucket/company-overview/'])
+        self.cursor.fetchall.side_effect = [self.integration, self.stage, overview, [], []]
 
     def statements(self):
         return [call.args[0] for call in self.cursor.execute.call_args_list]
@@ -56,13 +58,13 @@ class ReferenceSetupTest(unittest.TestCase):
         self.assertTrue(all(sql.startswith('DESC ') for sql in self.statements()))
 
     def test_parent_allowed_location_is_valid(self):
-        self.integration[2][2] = 's3://stock-bucket/raw/'
+        self.integration[2][2] = 's3://stock-bucket/'
         self.configure()
         self.warehouse.check_infrastructure()
 
     def test_invalid_integration_fails_before_table_setup(self):
         for row, value in [(0,'false'), (1,'GCS'), (2,'s3://wrong-bucket/'),
-                           (3,'s3://stock-bucket/raw/')]:
+                           (3,'s3://stock-bucket/ticker-catalog/')]:
             with self.subTest(row=row):
                 original = copy.deepcopy(self.integration)
                 self.integration[row][2] = value

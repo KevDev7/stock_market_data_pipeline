@@ -101,6 +101,14 @@ def warehouse_snapshot(cursor, database):
 
 
 class PolygonMigration:
+    source_prefixes = ['raw/massive/']
+
+    def snapshot(self):
+        return warehouse_snapshot(self.cur, self.database)
+
+    def original_version_ids(self):
+        return {(e['old_key'], e['version']) for e in self.record['entries']}
+
     def __init__(self, s3, cursor, bucket, database, journal):
         if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', database):
             raise ValueError('Invalid database identifier')
@@ -227,7 +235,7 @@ class PolygonMigration:
             self.cur.execute(ddl)
             if view_grants(self.cur,self.database,view) != saved['grants']:
                 raise RuntimeError('Bridge view grants changed')
-        if warehouse_snapshot(self.cur,self.database) != self.record['baseline']:
+        if self.snapshot() != self.record['baseline']:
             raise RuntimeError('Bridge view results differ from baseline')
         self.record['phases'].append('bridge')
         self.save()
@@ -238,7 +246,7 @@ class PolygonMigration:
         if len(self.record['copied']) != len(self.record['entries']) or 'bridge' not in self.record['phases']:
             raise RuntimeError('Copy verification and bridge views are required first')
         self.assert_originals_unchanged()
-        if warehouse_snapshot(self.cur,self.database) != self.record['baseline']:
+        if self.snapshot() != self.record['baseline']:
             raise RuntimeError('Data changed before metadata cutover')
         self.cur.execute('BEGIN')
         try:
@@ -295,11 +303,11 @@ class PolygonMigration:
     def hide(self):
         if 'verified' not in self.record['phases']:
             raise RuntimeError('Final verification is required before hiding originals')
-        if warehouse_snapshot(self.cur,self.database) != self.record['baseline']:
+        if self.snapshot() != self.record['baseline']:
             raise RuntimeError('Warehouse changed before hiding originals')
         # Reconcile a deletion whose response was lost, without creating another marker.
         versions, markers = self.versions()
-        originals = {(e['old_key'],e['version']) for e in self.record['entries']}
+        originals = self.original_version_ids()
         if {(v['Key'],v['VersionId']) for v in versions} != originals:
             raise RuntimeError('Original versions changed before hide')
         by_marker = {m['Key']:m for m in markers if m['IsLatest']}
@@ -341,8 +349,9 @@ class PolygonMigration:
                 raise failures[0]
             print(f'Original paths hidden: {sum(bool(e.get("delete_marker")) for e in self.record["entries"])}/{len(self.record["entries"])}',flush=True)
         self.assert_originals_unchanged()
-        if self.s3.list_objects_v2(Bucket=self.bucket,Prefix='raw/massive/',MaxKeys=1).get('Contents'):
-            raise RuntimeError('Old paths remain visible')
+        for prefix in self.source_prefixes:
+            if self.s3.list_objects_v2(Bucket=self.bucket,Prefix=prefix,MaxKeys=1).get('Contents'):
+                raise RuntimeError('Old paths remain visible')
         self.record['phases'] = sorted(set(self.record['phases']) | {'hidden'})
         self.save()
 

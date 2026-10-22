@@ -20,7 +20,15 @@ Set the provider, Snowflake, S3, stage, and private-key values documented
 in `.env.example`. Historical `POLYGON_*` names and `api.polygon.io` remain
 supported. Project-controlled provider names consistently use Polygon.
 Existing installations using legacy reference names must complete the
-[Polygon naming migration](polygon-naming-migration.md) before resuming ingestion.
+[Polygon naming migration](polygon-naming-migration.md), then the
+[dataset-folder migration](s3-layout-migration.md), then the
+[date-only archive migration](date-archive-migration.md), before resuming ingestion.
+The current archive folders are `daily-stock-prices/`, `ticker-catalog/`, and
+`company-overview/`. Keep `AWS_S3_PREFIX=daily-stock-prices` in the private `.env`.
+Compose forwards that same value to Airflow's configuration lookup so an older
+saved Airflow variable cannot redirect writes to the retired price prefix.
+Terraform provisions a scoped external stage for each folder; ingestion setup
+checks them without modifying infrastructure.
 
 Store only the dedicated ingestion profile in these Git-ignored files:
 

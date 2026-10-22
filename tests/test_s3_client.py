@@ -72,6 +72,17 @@ class S3RawClientTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Checksum mismatch"):
             self.client.read_dataframe(archived["key"], expected_sha256="wrong")
 
+    def test_retry_uses_same_date_path_and_keeps_new_run_metadata(self):
+        first = self.client.archive_dataframe(self.df, '2026-01-14', 'run-1')
+        changed = self.df.copy()
+        changed['RUN_ID'] = 'run-2'
+        second = self.client.archive_dataframe(changed, '2026-01-14', 'run-2')
+        self.assertEqual(first['key'], second['key'])
+        self.assertEqual(self.fake.last_put['Metadata']['run-id'], 'run-2')
+        self.assertEqual(self.client.read_dataframe(second['key']).loc[0, 'RUN_ID'], 'run-2')
+        with self.assertRaisesRegex(ValueError, 'Checksum mismatch'):
+            self.client.read_dataframe(first['key'], expected_sha256=first['sha256'])
+
     def test_object_metadata_supports_restartable_backfills(self):
         key = self.client.object_key("2026-01-14", "run-1")
         self.assertIsNone(self.client.object_metadata(key))

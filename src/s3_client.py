@@ -89,10 +89,9 @@ class S3RawClient:
         }
 
     def object_key(self, date_str, run_id):
-        return (
-            f"{self.prefix}/api_date={date_str}/run_id={run_id}/"
-            f"{self.filename}"
-        )
+        # Run identity remains in the records and object metadata. Each date has
+        # one current file; bucket versioning retains replaced copies.
+        return f"{self.prefix}/api_date={date_str}/{self.filename}"
 
     @staticmethod
     def _encode_dataframe(df):

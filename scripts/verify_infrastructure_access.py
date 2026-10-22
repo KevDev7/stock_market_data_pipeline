@@ -21,8 +21,8 @@ def verify_archives(connection):
     results = {}
     for stage, prefix, sample in [
         ('POLYGON_RAW_STAGE', AWS['s3_prefix'], 'api_date=2025-12-31/'),
-        ('POLYGON_REFERENCE_STAGE', 'raw/polygon/reference',
-         'polygon_ticker_catalog/api_date=2025-12-31/'),
+        ('POLYGON_TICKER_CATALOG_STAGE', 'ticker-catalog', 'api_date=2025-12-31/'),
+        ('POLYGON_COMPANY_OVERVIEW_STAGE', 'company-overview', 'api_date=2025-12-31/'),
     ]:
         listing = query(cursor, f'LIST @MARKET.RAW.{stage}/{sample}')
         if not listing:

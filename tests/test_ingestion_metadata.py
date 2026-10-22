@@ -44,7 +44,7 @@ class MetadataSetupTest(unittest.TestCase):
         with patch('src.reference_load.SNOWFLAKE', {'database':'MARKET'}), \
              patch('src.reference_load.S3RawClient') as archive:
             archive.return_value.archive_dataframe.return_value = {
-                'key':'raw/polygon/reference/polygon_ticker_overview/api_date=2025-01-02/test.ndjson.gz',
+                'key':'company-overview/api_date=2025-01-02/test.ndjson.gz',
                 'sha256':'fixture'}
             warehouse = ReferenceWarehouse(Mock(cursor=cursor))
             warehouse.load([], '2025-01-02', 'polygon_ticker_overview', requested_count=1)
@@ -67,7 +67,7 @@ class MetadataSetupTest(unittest.TestCase):
         with patch('src.reference_load.SNOWFLAKE', {'database':'MARKET'}), \
              patch('src.reference_load.S3RawClient') as archive:
             archive.return_value.archive_dataframe.return_value = {
-                'key':'raw/polygon/reference/polygon_ticker_overview/test.ndjson.gz', 'sha256':'fixture'}
+                'key':'company-overview/test.ndjson.gz', 'sha256':'fixture'}
             warehouse = ReferenceWarehouse(Mock(cursor=cursor))
             with self.assertRaisesRegex(RuntimeError, 'manifest write failed'):
                 warehouse.load([], '2025-01-02', 'polygon_ticker_overview')

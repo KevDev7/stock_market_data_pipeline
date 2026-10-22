@@ -1,0 +1,95 @@
+{
+  "verified_on": "2026-10-22",
+  "status": "completed",
+  "layout": "<dataset>/api_date=<date>/<filename>.ndjson.gz",
+  "s3": {
+    "visible_date_files": 1942,
+    "visible_run_folders": 0,
+    "dataset_date_counts": {
+      "daily-stock-prices": 763,
+      "ticker-catalog": 754,
+      "company-overview": 425
+    },
+    "downloads_copied_and_sha256_verified": 2472,
+    "compressed_bytes_preserved": 643226278,
+    "copied_object_versions_retained": 2472,
+    "noncurrent_date_file_versions": 530,
+    "original_run_path_versions_retained": 2472,
+    "journaled_recoverable_delete_markers": 2472,
+    "permanent_deletions": 0,
+    "metadata_tags_encoding_encryption_preserved": true,
+    "current_files_match_retained_warehouse_data": true,
+    "lifecycle_expiration_rules": 0
+  },
+  "snowflake": {
+    "tracking_tables_updated": [
+      "ADMIN.INGESTION_CHECKPOINTS",
+      "ADMIN.REFERENCE_MANIFEST",
+      "ADMIN.PRICE_REFRESH_MANIFEST"
+    ],
+    "changed_columns": ["S3_KEY"],
+    "tracking_update_transaction": "single commit",
+    "tracking_columns_grants_records_timestamps_and_checksums_preserved": true,
+    "normalized_full_relation_fingerprints_unchanged": 21,
+    "current_archives_compared_with_raw_in_full": {
+      "prices": {"dates": 763, "rows": 8270826, "match": true},
+      "ticker_catalog": {"dates": 754, "rows": 4001116, "match": true},
+      "company_overview": {"dates": 425, "rows": 47162, "match": true}
+    },
+    "retained_legacy_price_source_labels_preserved": true,
+    "completed_price_dates_unchanged": 762,
+    "completed_reference_dates_unchanged": {"ticker_catalog": 754, "company_overview": 425},
+    "remaining_run_paths_in_tracking_tables": 0,
+    "available_query_history": "Exactly three expected ADMIN tracking-path UPDATE statements; no other migration DML"
+  },
+  "verification": {
+    "python_tests": {"passed": 168, "failed": 0},
+    "migration_tests": [
+      "Warehouse run selection and ambiguous-selection rejection",
+      "Copied versions and idempotent reruns",
+      "Interrupted copy response reconciliation",
+      "Conflicting destination and corrupt source detection",
+      "Metadata rollback on unexpected warehouse changes",
+      "Verification required before hiding originals",
+      "Retained legacy price sources included in full comparison"
+    ],
+    "loader_checks": "Dates, sources, counts, and expected run identity checked before publication; empty overview loads preserved",
+    "dbt_parse": "passed",
+    "dbt_catalog_completeness_test": "passed",
+    "dbt_failure_storage": false,
+    "terraform_format_and_three_root_validation": "passed",
+    "docker_compose_configuration": "passed",
+    "ingestion_identity_reads_all_three_new_archive_paths": "passed",
+    "all_three_snowflake_stages_list_and_read": "passed",
+    "dashboard_authentication_and_eight_mart_reads": "passed",
+    "final_visible_files_and_all_version_ids": "passed",
+    "git_diff_check": "passed"
+  },
+  "archive_semantics": {
+    "current_file_per_dataset_date": 1,
+    "run_ids_retained_in_records_logs_and_object_metadata": true,
+    "historical_tracking_checksums_describe_the_original_attempt": true,
+    "historical_recovery": "Use S3 versions; migrated versions are mapped explicitly in the private journal",
+    "ongoing_version_id_tracking_added_to_warehouse": false,
+    "manual_refresh_and_backfill_writers_require_stopped_scheduled_ingestion": true
+  },
+  "boundaries": {
+    "new_source_api_requests": 0,
+    "archive_reserialization": false,
+    "raw_or_model_data_writes": false,
+    "dbt_model_rebuild": false,
+    "infrastructure_configuration_changes": false,
+    "credential_changes": false,
+    "dashboard_deployment": false,
+    "diagram_changes": false,
+    "ingestion_stays_stopped": true,
+    "commit_or_push_performed": false
+  },
+  "recovery": {
+    "private_journal": ".cache/date-layout/migration.json",
+    "original_tracking_rows_and_version_inventory": ".cache/date-layout/discovery.json",
+    "final_s3_audit": ".cache/date-layout/s3-audit.json",
+    "final_access_checks": ".cache/date-layout/access-checks.json",
+    "guide": "date-archive-migration.md"
+  }
+}

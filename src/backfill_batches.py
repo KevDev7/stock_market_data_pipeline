@@ -13,7 +13,8 @@ import pandas as pd
 from src.config import AWS, SNOWFLAKE
 from src.load import build_raw_landing_dataframe
 from src.reference import landing_rows
-from src.reference_load import REFERENCE_PREFIX, SOURCES
+from src.reference_load import SOURCES
+from src.archive_layout import REFERENCE_ARCHIVES
 from src.s3_client import S3RawClient
 from src.provider_names import canonical_source_sql
 
@@ -25,7 +26,7 @@ def archive_item(item):
         archive = S3RawClient()
         frame = build_raw_landing_dataframe(pd.DataFrame(records),date,run_id)
     elif source in SOURCES:
-        archive = S3RawClient(prefix=REFERENCE_PREFIX+'/'+source,filename='reference_raw.ndjson.gz')
+        archive = S3RawClient(prefix=REFERENCE_ARCHIVES[source][0],filename='reference_raw.ndjson.gz')
         frame = pd.DataFrame(landing_rows(records,date,source,run_id),
                              columns=['API_DATE','SOURCE','RUN_ID','RAW_PAYLOAD','INGESTED_AT'])
     else:
@@ -54,34 +55,37 @@ def land_batch(warehouse, items, prices=False, workers=8, refresh_campaign=None)
     if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*',database):
         raise ValueError('Invalid database')
     table=database+'.RAW.'+('DAILY_STOCKS_RAW' if prices else 'REFERENCE_RAW')
-    stage=SNOWFLAKE['s3_stage'] if prices else database+'.RAW.POLYGON_REFERENCE_STAGE'
-    if not all(re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*',part) for part in stage.split('.')):
-        raise ValueError('Invalid stage')
-    prefix=AWS['s3_prefix'].strip('/') if prices else REFERENCE_PREFIX
-    paths=[]
+    by_stage={}
     for entry in archived:
+        if prices:
+            stage, prefix = SNOWFLAKE['s3_stage'], AWS['s3_prefix'].strip('/')
+        else:
+            prefix, name = REFERENCE_ARCHIVES[entry['source']]
+            stage = database + '.RAW.' + name
+        if not all(re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*',part) for part in stage.split('.')):
+            raise ValueError('Invalid stage')
         if not entry['key'].startswith(prefix+'/'):
             raise ValueError('Unexpected archive prefix')
         path=entry['key'][len(prefix)+1:]
         if not re.fullmatch(r'[A-Za-z0-9_./=-]+',path):
             raise ValueError('Invalid archive path')
         if entry['row_count']:
-            paths.append("'"+path+"'")
+            by_stage.setdefault(stage, []).append("'"+path+"'")
     temp=database+'.RAW.TMP_BATCH_'+uuid.uuid4().hex[:12].upper()
     cur=warehouse.cursor
     cur.execute('CREATE TEMPORARY TABLE '+temp+' LIKE '+table)
     try:
-        if paths:
+        for stage, paths in by_stage.items():
             cur.execute(f'''COPY INTO {temp} (API_DATE,RUN_ID,SOURCE,RAW_PAYLOAD,INGESTED_AT)
                 FROM (SELECT TRY_TO_DATE($1:API_DATE::STRING),$1:RUN_ID::STRING,
                 {canonical_source_sql('$1:SOURCE::STRING')},$1:RAW_PAYLOAD::STRING,TRY_TO_TIMESTAMP_NTZ($1:INGESTED_AT::STRING)
                 FROM @{stage}) FILES=({','.join(paths)})
                 FILE_FORMAT=(TYPE=JSON COMPRESSION=AUTO) ON_ERROR=ABORT_STATEMENT''')
-        cur.execute(f'SELECT API_DATE,SOURCE,COUNT(*) FROM {temp} GROUP BY 1,2')
-        actual={(str(r[0]),r[1]):r[2] for r in cur.fetchall()}
-        expected={(e['date'],e['source']):e['row_count'] for e in archived if e['row_count']}
+        cur.execute(f'SELECT API_DATE,SOURCE,RUN_ID,COUNT(*) FROM {temp} GROUP BY 1,2,3')
+        actual={(str(r[0]),r[1],r[2]):r[3] for r in cur.fetchall()}
+        expected={(e['date'],e['source'],e['run_id']):e['row_count'] for e in archived if e['row_count']}
         if actual!=expected:
-            raise ValueError('Batch archive/warehouse source-date count mismatch')
+            raise ValueError('Batch archive/warehouse source-date-run count mismatch')
         cur.execute('BEGIN')
         if prices:
             if refresh_campaign:

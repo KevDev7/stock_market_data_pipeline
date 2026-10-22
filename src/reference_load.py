@@ -7,11 +7,12 @@ import pandas as pd
 
 from src.config import AWS, SNOWFLAKE
 from src.ingestion_metadata import ensure_manifest, require_metadata_migrated
-from src.provider_names import REFERENCE_PREFIX, REFERENCE_STAGE, canonical_source_sql
+from src.archive_layout import REFERENCE_ARCHIVES
+from src.provider_names import canonical_source_sql
 from src.reference import landing_rows
 from src.s3_client import S3RawClient
 
-SOURCES = {'polygon_ticker_catalog', 'polygon_ticker_overview'}
+SOURCES = set(REFERENCE_ARCHIVES)
 
 
 class ReferenceWarehouse:
@@ -21,7 +22,8 @@ class ReferenceWarehouse:
         self.database = SNOWFLAKE['database']
         if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*',self.database):
             raise ValueError('Invalid database identifier')
-        self.stage = self.database + '.RAW.' + REFERENCE_STAGE
+        self.stages = {source: self.database + '.RAW.' + stage
+                       for source, (_, stage) in REFERENCE_ARCHIVES.items()}
 
     def check_infrastructure(self):
         """Inspect Terraform-owned prerequisites without creating or altering them."""
@@ -32,7 +34,6 @@ class ReferenceWarehouse:
 
         if not AWS.get('s3_bucket'):
             fail('AWS_S3_BUCKET is not configured')
-        location = 's3://' + AWS['s3_bucket'] + '/' + REFERENCE_PREFIX + '/'
         try:
             self.cursor.execute('DESC INTEGRATION STOCK_MARKET_S3_INTEGRATION')
             properties = {r[0]: r[2] for r in self.cursor.fetchall()}
@@ -43,15 +44,21 @@ class ReferenceWarehouse:
         if properties.get('STORAGE_PROVIDER') != 'S3':
             fail('storage integration is not configured for S3')
 
-        def covers(value):
+        def covers(value, location):
             return value == '*' or location.startswith(value.rstrip('/') + '/')
 
         locations = [x.strip() for x in properties.get('STORAGE_ALLOWED_LOCATIONS', '').split(',') if x.strip()]
         blocked = [x.strip() for x in properties.get('STORAGE_BLOCKED_LOCATIONS', '').split(',') if x.strip()]
-        if not any(covers(value) for value in locations) or any(covers(value) for value in blocked):
-            fail('reference archive location is not permitted by the integration')
+        for source, (prefix, _) in REFERENCE_ARCHIVES.items():
+            location = 's3://' + AWS['s3_bucket'] + '/' + prefix + '/'
+            if (not any(covers(value, location) for value in locations)
+                    or any(covers(value, location) for value in blocked)):
+                fail(source + ' archive location is not permitted by the integration')
+            self._check_stage(self.stages[source], location, fail, guidance)
+
+    def _check_stage(self, name, location, fail, guidance):
         try:
-            self.cursor.execute(f'DESC STAGE {self.stage}')
+            self.cursor.execute(f'DESC STAGE {name}')
             stage = {(r[0], r[1]): r[3] for r in self.cursor.fetchall()}
         except Exception as exc:
             raise RuntimeError('Cannot inspect the reference external stage. ' + guidance) from exc
@@ -91,10 +98,13 @@ class ReferenceWarehouse:
         run_id = 'reference-' + uuid.uuid4().hex[:12]
         rows = landing_rows(records, date, source, run_id)
         columns = ['API_DATE','SOURCE','RUN_ID','RAW_PAYLOAD','INGESTED_AT']
-        archive = S3RawClient(prefix=REFERENCE_PREFIX + '/' + source,
+        prefix, _ = REFERENCE_ARCHIVES[source]
+        archive = S3RawClient(prefix=prefix,
                               filename='reference_raw.ndjson.gz')
         archived = archive.archive_dataframe(pd.DataFrame(rows,columns=columns),str(date),run_id)
-        stage_path = archived['key'][len(REFERENCE_PREFIX)+1:]
+        if not archived['key'].startswith(prefix + '/'):
+            raise ValueError('Unexpected archive prefix')
+        stage_path = archived['key'][len(prefix)+1:]
         if not re.fullmatch(r'[A-Za-z0-9_./=-]+',stage_path):
             raise ValueError('Unexpected archive key')
         temp = self.database + '.RAW.TMP_REFERENCE_' + uuid.uuid4().hex[:12].upper()
@@ -104,11 +114,16 @@ class ReferenceWarehouse:
                 self.cursor.execute(f'''COPY INTO {temp} (API_DATE,RUN_ID,SOURCE,RAW_PAYLOAD,INGESTED_AT)
                     FROM (SELECT TRY_TO_DATE($1:API_DATE::STRING),$1:RUN_ID::STRING,
                     {canonical_source_sql('$1:SOURCE::STRING')},$1:RAW_PAYLOAD::STRING,TRY_TO_TIMESTAMP_NTZ($1:INGESTED_AT::STRING)
-                    FROM @{self.stage}/{stage_path})
+                    FROM @{self.stages[source]}/{stage_path})
                     FILE_FORMAT=(TYPE=JSON COMPRESSION=AUTO) ON_ERROR=ABORT_STATEMENT''')
             self.cursor.execute(f'SELECT COUNT(*) FROM {temp}')
             if self.cursor.fetchone()[0] != len(rows):
                 raise ValueError('Reference archive/warehouse row-count mismatch')
+            self.cursor.execute(f'SELECT COUNT(*) FROM {temp} WHERE RUN_ID IS DISTINCT FROM %s '
+                'OR API_DATE IS DISTINCT FROM TO_DATE(%s) OR SOURCE IS DISTINCT FROM %s',
+                (run_id, str(date), source))
+            if self.cursor.fetchone()[0]:
+                raise ValueError('Archived reference file changed before loading; retry ingestion')
             self.cursor.execute('BEGIN')
             for table in ['RAW.REFERENCE_RAW','ADMIN.REFERENCE_MANIFEST']:
                 self.cursor.execute(f'DELETE FROM {self.database}.{table} WHERE API_DATE=%s AND SOURCE=%s',(str(date),source))

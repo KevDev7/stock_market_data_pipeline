@@ -16,7 +16,8 @@ x-airflow-common:
     AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials
     AWS_CONFIG_FILE: /run/secrets/aws_config
     AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-    AWS_S3_PREFIX: ${AWS_S3_PREFIX:-raw/polygon/grouped-daily}
+    AWS_S3_PREFIX: ${AWS_S3_PREFIX:-daily-stock-prices}
+    AIRFLOW_VAR_AWS_S3_PREFIX: ${AWS_S3_PREFIX:-daily-stock-prices}
 
     # Airflow with Snowflake
     AIRFLOW_VAR_SNOWFLAKE_ACCOUNT: ${SNOWFLAKE_ACCOUNT}

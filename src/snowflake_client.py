@@ -130,7 +130,7 @@ class SnowflakeClient:
         self._validate_identifier(table_name)
         return f"{SNOWFLAKE['database']}.{SNOWFLAKE['schema']}.{table_name}"
 
-    def replace_s3_object_for_date(self, object_key, date_str, expected_rows):
+    def replace_s3_object_for_date(self, object_key, date_str, expected_rows, expected_run_id):
         """Load one archived S3 object and atomically replace its raw date."""
         if not re.fullmatch(r"[A-Za-z0-9_./=-]+", object_key):
             raise ValueError(f"Invalid S3 object key: {object_key}")
@@ -179,6 +179,16 @@ class SnowflakeClient:
                     f"S3 row-count mismatch for {date_str}: "
                     f"expected {expected_rows}, staged {staged_rows}"
                 )
+
+            self.cursor.execute(
+                f"SELECT COUNT(*) FROM {temp_qualified} WHERE RUN_ID IS DISTINCT FROM %s "
+                "OR API_DATE IS DISTINCT FROM TO_DATE(%s) "
+                "OR SOURCE IS NULL OR SOURCE NOT IN "
+                "('polygon_grouped_daily','polygon_grouped_daily_legacy_backfill')",
+                (expected_run_id, date_str),
+            )
+            if self.cursor.fetchone()[0]:
+                raise ValueError('Archived price file changed before loading; retry ingestion')
 
             self.cursor.execute("BEGIN")
             self.cursor.execute(

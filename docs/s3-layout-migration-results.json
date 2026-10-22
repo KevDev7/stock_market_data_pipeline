@@ -1,0 +1,126 @@
+{
+  "verified_on": "2026-10-22",
+  "status": "completed",
+  "root_folders": [
+    "daily-stock-prices/",
+    "ticker-catalog/",
+    "company-overview/"
+  ],
+  "archives": {
+    "verified_copies": 2472,
+    "bytes": 643226278,
+    "dataset_object_counts": {
+      "daily-stock-prices": 1293,
+      "ticker-catalog": 754,
+      "company-overview": 425
+    },
+    "all_source_and_destination_sha256_values_matched": true,
+    "compressed_bytes_metadata_tags_encoding_and_encryption_preserved": true,
+    "destination_etags_and_sizes_match_originals": true,
+    "date_directories_run_ids_and_filenames_preserved": true,
+    "visible_old_objects": 0,
+    "visible_new_objects": 2472,
+    "original_versions_retained": 2472,
+    "journaled_recoverable_delete_markers": 2472,
+    "permanent_original_deletions": 0,
+    "earlier_raw_massive_delete_markers_untouched": true
+  },
+  "snowflake": {
+    "database": "MARKET",
+    "stages": {
+      "POLYGON_RAW_STAGE": "daily-stock-prices/",
+      "POLYGON_TICKER_CATALOG_STAGE": "ticker-catalog/",
+      "POLYGON_COMPANY_OVERVIEW_STAGE": "company-overview/"
+    },
+    "existing_price_stage_updated_in_place": true,
+    "existing_reference_stage_renamed_and_repointed_in_place": true,
+    "new_overview_stage_created_by_terraform": true,
+    "resource_replacements": 0,
+    "all_three_stage_listings_and_sample_reads": "passed",
+    "stage_ownership_and_access_preserved": true,
+    "normalized_full_relation_fingerprints_matched": 21,
+    "raw_and_transformed_payloads_unchanged": true,
+    "source_labels_unchanged": true,
+    "raw_counts": {
+      "RAW.DAILY_STOCKS_RAW": 8270826,
+      "RAW.REFERENCE_RAW": 4048278
+    },
+    "tracking_path_updates": {
+      "tables": [
+        "ADMIN.INGESTION_CHECKPOINTS",
+        "ADMIN.REFERENCE_MANIFEST",
+        "ADMIN.PRICE_REFRESH_MANIFEST"
+      ],
+      "changed_fields": ["S3_KEY"],
+      "transaction": "single commit",
+      "all_other_fields_columns_and_grants_preserved": true,
+      "row_counts": {
+        "ADMIN.INGESTION_CHECKPOINTS": 1871,
+        "ADMIN.REFERENCE_MANIFEST": 1179,
+        "ADMIN.PRICE_REFRESH_MANIFEST": 530
+      },
+      "available_tagged_query_history": "exactly three expected successful ADMIN S3_KEY UPDATE statements"
+    },
+    "completed_price_dates": 762,
+    "completed_reference_source_dates": {
+      "polygon_ticker_catalog": 754,
+      "polygon_ticker_overview": 425
+    },
+    "known_issuer_count": 6417,
+    "dashboard_authentication_and_eight_mart_reads": "passed"
+  },
+  "permissions": {
+    "application_identity_preserved": true,
+    "application_list_and_read_for_all_three_folders": "passed",
+    "simulated_application_write_permission": "allowed for all three folders",
+    "simulated_application_delete_permission": "denied for all three folders",
+    "simulated_application_access_to_retired_price_prefix": "denied",
+    "iam_and_integration_scoped_to_new_prefixes_only": true,
+    "temporary_old_prefix_access_removed": true,
+    "bucket_root_access_not_added": true,
+    "credentials_and_trust_relationships_unchanged": true
+  },
+  "verification": {
+    "python_unit_tests": {"passed": 153, "failed": 0},
+    "dbt_parse": "passed",
+    "dbt_catalog_completeness_test": "passed",
+    "dbt_failure_storage_enabled": false,
+    "terraform_formatting": "passed",
+    "terraform_validation_all_three_roots": "passed",
+    "compose_configuration_and_matching_airflow_prefix": "passed",
+    "git_diff_check": "passed",
+    "final_strict_terraform_plans": {
+      "aws": {"managed_resources": 8, "imports": 0, "resource_mutations": 0},
+      "snowflake": {"managed_resources": 24, "imports": 0, "resource_mutations": 0},
+      "bootstrap": {"managed_resources": 5, "imports": 0, "resource_mutations": 0}
+    },
+    "saved_plans_applied_with_backend_locking": true,
+    "reviewed_refresh_only_reconciliation": [
+      "Dashboard last-successful-login timestamp and warehouse lifecycle metadata",
+      "IAM role read-back of the separately managed reviewed inline policy",
+      "New overview stage aws_access_point_arn null-to-empty normalization; both mean unset"
+    ],
+    "refresh_only_resource_actions": 0,
+    "ignore_rules_broadened": false,
+    "manual_terraform_state_edits": false,
+    "private_state_plans_journals_and_credentials_git_ignored": true
+  },
+  "boundaries": {
+    "source_api_requests": 0,
+    "ingestion_or_backfill_runs": 0,
+    "archive_reserialization": false,
+    "warehouse_payload_writes": false,
+    "dbt_model_rebuild": false,
+    "credential_rotation": false,
+    "dashboard_deployment": false,
+    "diagram_changes": false,
+    "ingestion_remains_stopped": true,
+    "commit_or_push_performed_during_migration": false
+  },
+  "recovery": {
+    "private_journal": ".cache/s3-layout/migration.json",
+    "private_destination_version_inventory": ".cache/s3-layout/destination-versions.json",
+    "guide": "docs/s3-layout-migration.md",
+    "historical_archive_bytes_and_verification_records_keep_their_original_names": true
+  }
+}

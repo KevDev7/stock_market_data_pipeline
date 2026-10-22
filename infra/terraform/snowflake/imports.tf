@@ -47,6 +47,11 @@ import {
   id       = "\"${each.value.name}\""
 }
 import {
+  for_each = var.adopt_existing && var.manage_overview_stage && var.adopt_overview_stage ? toset([var.overview_stage_name]) : toset([])
+  to       = snowflake_stage_external_s3.overview[0]
+  id       = "${local.quoted_raw}.\"${each.value}\""
+}
+import {
   for_each = var.adopt_existing ? var.roles : {}
   to       = snowflake_account_role.project[each.key]
   id       = "\"${each.value.name}\""

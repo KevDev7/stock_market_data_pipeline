@@ -69,6 +69,7 @@ def archive_and_load_raw_data(
             archive_result["key"],
             date_str,
             expected_rows=archive_result["row_count"],
+            expected_run_id=run_id,
         )
 
         # Record checkpoint status

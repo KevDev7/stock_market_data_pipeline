@@ -11,8 +11,8 @@ class FakeArchive:
         return {
             "bucket": "stock-bucket",
             "key": (
-                "raw/polygon/grouped-daily/api_date=2026-01-14/"
-                "run_id=run-1/daily_stocks_raw.ndjson.gz"
+                "daily-stock-prices/api_date=2026-01-14/"
+                "daily_stocks_raw.ndjson.gz"
             ),
             "etag": "etag",
             "sha256": "checksum",
@@ -37,7 +37,8 @@ class FakeSnowflake:
     def record_checkpoint(self, **kwargs):
         self.checkpoints.append(kwargs)
 
-    def replace_s3_object_for_date(self, key, date_str, expected_rows):
+    def replace_s3_object_for_date(self, key, date_str, expected_rows, expected_run_id):
+        self.expected_run_id = expected_run_id
         self.load_call = (key, date_str, expected_rows)
         if self.fail_load:
             raise RuntimeError("warehouse unavailable")
@@ -66,6 +67,7 @@ class LoadDataTest(unittest.TestCase):
             ["started", "archived", "completed"],
         )
         self.assertEqual(warehouse.load_call[1:], ("2026-01-14", 2))
+        self.assertEqual(warehouse.expected_run_id, 'run-1')
         self.assertTrue(warehouse.checkpoints[-1]["s3_key"].endswith(".ndjson.gz"))
         self.assertIn("run_id=run-1", captured.output[0])
         self.assertIn("api_date=2026-01-14", captured.output[0])

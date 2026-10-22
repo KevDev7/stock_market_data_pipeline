@@ -20,8 +20,26 @@ variable "raw_schema_comment" { type = string }
 variable "archive_bucket" { type = string }
 variable "price_prefix" { type = string }
 variable "reference_prefix" { type = string }
+variable "overview_prefix" {
+  type    = string
+  default = "company-overview"
+}
+variable "overview_stage_name" {
+  type    = string
+  default = "POLYGON_COMPANY_OVERVIEW_STAGE"
+}
+variable "manage_overview_stage" {
+  description = "False only while migrating the previous shared reference stage."
+  type        = bool
+  default     = true
+}
+variable "adopt_overview_stage" {
+  description = "Import an already existing overview stage; false when creating it."
+  type        = bool
+  default     = false
+}
 variable "additional_reference_prefixes" {
-  description = "Temporary scoped reference prefixes during an explicitly reviewed archive migration."
+  description = "Temporary scoped archive prefixes during an explicitly reviewed path migration."
   type        = list(string)
   default     = []
 }
