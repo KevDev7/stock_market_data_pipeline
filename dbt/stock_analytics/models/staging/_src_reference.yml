@@ -4,8 +4,22 @@ sources:
     database: "{{ env_var('SNOWFLAKE_DATABASE', 'MARKET') }}"
     schema: RAW
     tables:
-      - name: REFERENCE_RAW
-        description: Untouched Polygon reference responses with operational envelopes.
+      - name: TICKER_CATALOG_RAW
+        description: Untouched Polygon ticker catalog records with operational envelopes.
+        columns:
+          - name: SOURCE
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['polygon_ticker_catalog']
+      - name: COMPANY_OVERVIEW_RAW
+        description: Untouched Polygon company overview records with operational envelopes.
+        columns:
+          - name: SOURCE
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['polygon_ticker_overview']
   - name: admin_ingestion
     database: "{{ env_var('SNOWFLAKE_DATABASE', 'MARKET') }}"
     schema: ADMIN

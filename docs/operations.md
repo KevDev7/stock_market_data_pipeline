@@ -45,6 +45,12 @@ committed in the same transaction as the matching raw reference replacement,
 including successful requests returning zero rows. dbt reads this manifest to
 check that parsing preserves complete catalogs; dbt does not create the table.
 
+Catalog records land in `RAW.TICKER_CATALOG_RAW`; company overview records land
+in `RAW.COMPANY_OVERVIEW_RAW`. Mixed batches validate separate temporary tables,
+then update both destinations and their manifest entries in one transaction.
+See the [RAW split and recovery procedure](raw-reference-split.md) for older
+environments with a shared `RAW.REFERENCE_RAW` table.
+
 `ADMIN.PRICE_REFRESH_MANIFEST` records campaign/date completion for deliberate
 historical price refreshes. It is separate from normal daily price checkpoints.
 All three metadata tables are application-owned; they are not processing layers.

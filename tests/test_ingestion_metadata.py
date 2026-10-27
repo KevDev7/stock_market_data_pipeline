@@ -52,7 +52,7 @@ class MetadataSetupTest(unittest.TestCase):
         self.assertFalse(any(s.startswith('COPY') for s in sql))
         deletes = [s for s in sql if s.startswith('DELETE')]
         self.assertEqual(len(deletes), 2)
-        self.assertIn('MARKET.RAW.REFERENCE_RAW', deletes[0])
+        self.assertIn('MARKET.RAW.COMPANY_OVERVIEW_RAW', deletes[0])
         self.assertIn('MARKET.ADMIN.REFERENCE_MANIFEST', deletes[1])
         self.assertLess(sql.index('BEGIN'), sql.index(deletes[0]))
         self.assertGreater(sql.index('COMMIT'), sql.index(deletes[1]))

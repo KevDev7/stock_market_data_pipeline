@@ -1,0 +1,197 @@
+{
+  "migration": "raw-reference-split-v1",
+  "status": "verified",
+  "started_at": "2026-10-26T23:57:49.007584+00:00",
+  "verified_at": "2026-10-27T00:03:07.817803+00:00",
+  "database": "MARKET",
+  "new_tables": {
+    "RAW.TICKER_CATALOG_RAW": {
+      "source": "polygon_ticker_catalog",
+      "rows": 4001116,
+      "dates": 754
+    },
+    "RAW.COMPANY_OVERVIEW_RAW": {
+      "source": "polygon_ticker_overview",
+      "rows": 47162,
+      "dates": 425
+    }
+  },
+  "preserved_columns": [
+    "API_DATE",
+    "RUN_ID",
+    "SOURCE",
+    "RAW_PAYLOAD",
+    "INGESTED_AT"
+  ],
+  "exact_multiset_comparison": "passed: all five columns and duplicate multiplicities",
+  "per_date_counts_and_hashes": "unchanged",
+  "table_definitions_ownership_grants": "preserved",
+  "active_staging_views_updated": [
+    "STAGING.STG_MARKET__CATALOG",
+    "STAGING.STG_MARKET__ISSUER_OBSERVATIONS"
+  ],
+  "staging_definitions_and_grants": "verified against approved source SQL and baseline grants",
+  "protected_relations": {
+    "ADMIN.INGESTION_CHECKPOINTS": {
+      "rows": 1871,
+      "hash": "8740213936438282634"
+    },
+    "ADMIN.PRICE_REFRESH_MANIFEST": {
+      "rows": 530,
+      "hash": "997166963606664301"
+    },
+    "ADMIN.REFERENCE_MANIFEST": {
+      "rows": 1179,
+      "hash": "505095998810256384"
+    },
+    "INTERMEDIATE.INT_MARKET__DAILY": {
+      "rows": 3908149,
+      "hash": "3264102967667022472"
+    },
+    "INTERMEDIATE.INT_MARKET__REFERENCE_DAILY": {
+      "rows": 4001116,
+      "hash": "-2725213837714325538"
+    },
+    "INTERMEDIATE.INT_MARKET__SECURITY_HISTORY": {
+      "rows": 8550,
+      "hash": "1944440645903020921"
+    },
+    "MARTS.CALC_SECURITY_DAILY_MOMENTUM": {
+      "rows": 3908149,
+      "hash": "-2578084313861270403"
+    },
+    "MARTS.DIM_DATE": {
+      "rows": 502,
+      "hash": "1504892162108364123"
+    },
+    "MARTS.DIM_SECTOR": {
+      "rows": 71,
+      "hash": "6489533784219766161"
+    },
+    "MARTS.DIM_SECURITY": {
+      "rows": 6543,
+      "hash": "-6044275658173918343"
+    },
+    "MARTS.DIM_SECURITY_HISTORY": {
+      "rows": 8550,
+      "hash": "-3026412736550918187"
+    },
+    "MARTS.FCT_MARKET_DAILY_BREADTH": {
+      "rows": 502,
+      "hash": "-6565431744335989860"
+    },
+    "MARTS.FCT_SECTOR_DAILY_BREADTH": {
+      "rows": 35141,
+      "hash": "6963001126195705485"
+    },
+    "MARTS.FCT_SECURITY_CURRENT_SNAPSHOT": {
+      "rows": 5159,
+      "hash": "8566135975518156439"
+    },
+    "MARTS.FCT_SECURITY_DAILY_MOMENTUM": {
+      "rows": 2567657,
+      "hash": "268700412702171465"
+    },
+    "RAW.DAILY_STOCKS_RAW": {
+      "rows": 8270826,
+      "hash": "-1199863554041361664"
+    },
+    "RAW.DAILY_STOCKS_RAW_BEFORE_REFERENCE_20261007": {
+      "rows": 7934316,
+      "hash": "-6537626324279809038"
+    },
+    "RAW.REFERENCE_RAW": {
+      "rows": 4048278,
+      "hash": "2434747289450525162"
+    },
+    "STAGING.STG_DAILY_STOCKS": {
+      "rows": 8270826,
+      "hash": "8519145846502328862"
+    },
+    "STAGING.STG_MARKET__CATALOG": {
+      "rows": 4001116,
+      "hash": "8344453909611449808"
+    },
+    "STAGING.STG_MARKET__ISSUER_OBSERVATIONS": {
+      "rows": 47162,
+      "hash": "-4497888379145618492"
+    },
+    "BACKUP_STAGING_FOUR_LAYER_20261008.STG_MARKET__CATALOG": {
+      "rows": 0,
+      "hash": "0"
+    },
+    "BACKUP_STAGING_FOUR_LAYER_20261008.STG_MARKET__ISSUER_OBSERVATIONS": {
+      "rows": 0,
+      "hash": "0"
+    },
+    "BACKUP_STAGING_SMA_FIX_20261007.STG_MARKET__CATALOG": {
+      "rows": 0,
+      "hash": "0"
+    },
+    "BACKUP_STAGING_SMA_FIX_20261007.STG_MARKET__ISSUER_OBSERVATIONS": {
+      "rows": 0,
+      "hash": "0"
+    }
+  },
+  "protected_relation_comparisons": 25,
+  "dashboard": {
+    "authentication": "passed",
+    "published_marts_read": 8
+  },
+  "ingestion_access": {
+    "infrastructure_checks": "passed",
+    "destination_reads": "passed",
+    "write_permissions": "existing ACCOUNTADMIN ownership retained on both destinations",
+    "completed_catalog_dates": 754,
+    "completed_overview_dates": 425,
+    "known_issuers": 6417
+  },
+  "setup_migration_guard": "passed after finalization",
+  "tests": {
+    "python_unit_tests_passed": 186,
+    "python_subtests_passed": 106,
+    "dbt_parse": "passed",
+    "dbt_tests_passed": 9,
+    "dbt_failure_rows_stored": false,
+    "dbt_test_ids": [
+      "test.stock_analytics.not_null_stg_market__issuer_observations_observation_date.f9bbdcd4f4",
+      "test.stock_analytics.not_null_stg_market__catalog_trade_date.139c16c714",
+      "test.stock_analytics.source_accepted_values_raw_reference_COMPANY_OVERVIEW_RAW_SOURCE__polygon_ticker_overview.d7b5af275f",
+      "test.stock_analytics.source_accepted_values_raw_reference_TICKER_CATALOG_RAW_SOURCE__polygon_ticker_catalog.91806a36bc",
+      "test.stock_analytics.source_not_null_raw_reference_COMPANY_OVERVIEW_RAW_SOURCE.6063cbadd2",
+      "test.stock_analytics.source_not_null_raw_reference_TICKER_CATALOG_RAW_SOURCE.992a1012eb",
+      "test.stock_analytics.not_null_stg_market__catalog_ticker.2aeca321ec",
+      "test.stock_analytics.stg_market__catalog__complete_manifest",
+      "test.stock_analytics.dbt_utils_unique_combination_of_columns_stg_market__catalog_ticker__trade_date.25ac60b404"
+    ],
+    "git_diff_check": "passed"
+  },
+  "available_query_history": {
+    "project_data_writes": 2,
+    "intended_writes": "one INSERT SELECT per new RAW table",
+    "unexpected_project_data_writes": 0
+  },
+  "recovery": {
+    "retained_table": "MARKET.RAW.REFERENCE_RAW",
+    "rows": 4048278,
+    "new_application_writes": false,
+    "historical_backup_views_preserved": 4,
+    "journal": ".cache/raw-reference-split/migration.json",
+    "journal_permissions": "0600; Git-ignored",
+    "instructions": "docs/raw-reference-split.md"
+  },
+  "boundaries": {
+    "source_requests": false,
+    "s3_changes": false,
+    "backfill": false,
+    "intermediate_or_marts_rebuild": false,
+    "terraform_changes": false,
+    "credential_changes": false,
+    "dashboard_deployment": false,
+    "diagram_changes": false,
+    "dag_activation": false,
+    "orchestration": "Docker daemon stopped; no local ingestion/refresh writers; no scheduler started",
+    "committed": false,
+    "pushed": false
+  }
+}

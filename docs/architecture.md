@@ -96,7 +96,7 @@ Historical versions beyond the active reporting window remain retained.
 
 | Schema | Responsibility | Main objects |
 |---|---|---|
-| `RAW` | Queryable source landing | `DAILY_STOCKS_RAW`, `REFERENCE_RAW`, external stages |
+| `RAW` | Queryable source landing | `DAILY_STOCKS_RAW`, `TICKER_CATALOG_RAW`, `COMPANY_OVERVIEW_RAW`, external stages |
 | `STAGING` | Standardize each source, resolve duplicates, flag invalid prices | `STG_DAILY_STOCKS`, `STG_MARKET__CATALOG`, `STG_MARKET__ISSUER_OBSERVATIONS` |
 | `INTERMEDIATE` | Daily eligibility and identity; observed industry enrichment; accepted price and attribute history | `INT_MARKET__REFERENCE_DAILY`, `INT_MARKET__DAILY`, `INT_MARKET__SECURITY_HISTORY` |
 | `MARTS` | Calculate analytical measures and aggregates; build facts and dimensions | Shared `CALC_SECURITY_DAILY_MOMENTUM` helper, four dimensions, and four facts |
@@ -225,7 +225,8 @@ logic begins exclusively in MARTS.
 |---|---|---|---|
 | `RAW.DAILY_STOCKS_RAW` | Incremental | Partition-based on `API_DATE` | Overwrite one date partition |
 | Staging models | No physical row load | Views | Create or replace view |
-| `RAW.REFERENCE_RAW` | Dated snapshots | Complete catalog or issuer-observation batch | Atomically replace matching source/date; archive versions retained |
+| `RAW.TICKER_CATALOG_RAW` | Dated snapshots | Complete ticker catalog batch | Atomically replace matching source/date; archive versions retained |
+| `RAW.COMPANY_OVERVIEW_RAW` | Dated snapshots | Complete company overview batch | Atomically replace matching source/date; archive versions retained |
 | `INT_MARKET__REFERENCE_DAILY`, `INT_MARKET__SECURITY_HISTORY` | Full | Dated eligibility, identity and attribute history | Rebuild tables |
 | `INT_MARKET__DAILY` | Incremental | Recent-date lookback | Atomically replace output date window |
 | `MARTS.CALC_SECURITY_DAILY_MOMENTUM` | Incremental | Recent-date output; observation-based warmup | Atomically replace output date window |

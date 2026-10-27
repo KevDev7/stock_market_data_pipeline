@@ -99,10 +99,11 @@ class LayerModelTest(unittest.TestCase):
                 API_DATE DATE, INGESTED_AT TIMESTAMP, RUN_ID VARCHAR, RAW_PAYLOAD VARCHAR
             )
         """)
-        self.db.execute("""CREATE TABLE raw_reference (
-            API_DATE DATE, SOURCE VARCHAR, INGESTED_AT TIMESTAMP, RAW_PAYLOAD VARCHAR,
-            RUN_ID VARCHAR DEFAULT 'reference-test'
-        )""")
+        for table in ('ticker_catalog_raw', 'company_overview_raw'):
+            self.db.execute(f"""CREATE TABLE {table} (
+                API_DATE DATE, SOURCE VARCHAR, INGESTED_AT TIMESTAMP, RAW_PAYLOAD VARCHAR,
+                RUN_ID VARCHAR DEFAULT 'reference-test'
+            )""")
         for seed in SEEDS:
             fields = ", ".join(f"{name} VARCHAR" for name in SOURCE_COLUMNS)
             self.db.execute(f"CREATE TABLE {seed} ({fields})")
@@ -115,7 +116,7 @@ class LayerModelTest(unittest.TestCase):
         return {
             "config": lambda **kwargs: "",
             "ref": lambda name: name,
-            "source": lambda source, table: "raw_reference" if source == "raw_reference" else "raw_daily_stocks",
+            "source": lambda source, table: table.lower() if source == "raw_reference" else "raw_daily_stocks",
             "this": model,
             "is_incremental": lambda: incremental,
             "var": lambda name, default=None: self.variables.get(name, default),
@@ -170,7 +171,9 @@ class LayerModelTest(unittest.TestCase):
                         [date, ingested_at or dt.datetime(2026, 1, 1), "run-1", json.dumps(payload)])
 
     def add_reference(self, date, payload, source="polygon_ticker_catalog"):
-        self.db.execute("INSERT INTO raw_reference (API_DATE,SOURCE,INGESTED_AT,RAW_PAYLOAD) VALUES (?, ?, ?, ?)",
+        from src.raw_reference import REFERENCE_TABLES
+        table = REFERENCE_TABLES[source].lower()
+        self.db.execute(f"INSERT INTO {table} (API_DATE,SOURCE,INGESTED_AT,RAW_PAYLOAD) VALUES (?, ?, ?, ?)",
                         [date, source, dt.datetime(2026, 1, 1), json.dumps(payload)])
 
     def build_inputs(self):
@@ -267,7 +270,7 @@ class LayerModelTest(unittest.TestCase):
         start=dt.date(2024,1,2)
         for i in range(3):
             self.add_price(start+dt.timedelta(days=i),10+i)
-        self.db.execute("DELETE FROM raw_reference WHERE API_DATE=?",[start+dt.timedelta(days=1)])
+        self.db.execute("DELETE FROM ticker_catalog_raw WHERE API_DATE=?",[start+dt.timedelta(days=1)])
         self.build_inputs()
         self.build("int_market__daily")
         self.build_history()
@@ -316,7 +319,7 @@ class LayerModelTest(unittest.TestCase):
         first=dt.date(2025,1,2)
         self.add_price(first,10)
         self.add_price(first+dt.timedelta(days=1),100)
-        self.db.execute("DELETE FROM raw_reference WHERE API_DATE=?",[first+dt.timedelta(days=1)])
+        self.db.execute("DELETE FROM ticker_catalog_raw WHERE API_DATE=?",[first+dt.timedelta(days=1)])
         self.add_reference(first+dt.timedelta(days=1),{"ticker":"AAA","name":"New issuer",
             "type":"CS","locale":"us","active":True,"cik":"OTHER","share_class_figi":"OTHER"})
         self.build_inputs()
@@ -334,7 +337,7 @@ class LayerModelTest(unittest.TestCase):
             self.add_price(day,100+i,ticker='AAA')
             if i!=2:
                 self.add_price(day,20+i,ticker='AAAw')
-                self.db.execute("DELETE FROM raw_reference WHERE API_DATE=? AND RAW_PAYLOAD LIKE '%AAAw%'",[day])
+                self.db.execute("DELETE FROM ticker_catalog_raw WHERE API_DATE=? AND RAW_PAYLOAD LIKE '%AAAw%'",[day])
                 self.add_reference(day,{'ticker':'AAAw','name':'Company','type':'CS','locale':'us',
                     'active':True,'cik':'CIK-AAA','share_class_figi':'FIGI-AAA'})
         self.build_inputs()
@@ -354,7 +357,7 @@ class LayerModelTest(unittest.TestCase):
             day=first+dt.timedelta(days=i)
             self.add_price(day,100+i,ticker='ANGI')
             self.add_price(day,20+i,ticker='ANGIV')
-            self.db.execute("DELETE FROM raw_reference WHERE API_DATE=?",[day])
+            self.db.execute("DELETE FROM ticker_catalog_raw WHERE API_DATE=?",[day])
             for ticker,name in [('ANGI','Angi Inc. Class A Common Stock'),
                                 ('ANGIV','Angi Inc. Class A Common Stock When Issued')]:
                 self.add_reference(day,{'ticker':ticker,'name':name,'type':'CS','locale':'us',
@@ -482,7 +485,7 @@ class LayerModelTest(unittest.TestCase):
         self.add_price(dt.date(2025, 9, 18), 10)
         self.build_inputs()
         self.build_chain()
-        self.db.execute("DELETE FROM raw_reference WHERE SOURCE='polygon_ticker_catalog'")
+        self.db.execute("DELETE FROM ticker_catalog_raw WHERE SOURCE='polygon_ticker_catalog'")
         self.add_constituent(SEEDS[-1], "BBB")
         self.build_inputs()
         self.build_chain(incremental=True)

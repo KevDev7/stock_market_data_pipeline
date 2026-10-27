@@ -9,10 +9,12 @@
 - [Polygon naming and archive migration](polygon-naming-migration.md)
 - [S3 dataset-folder layout and migration](s3-layout-migration.md)
 - [Current API-date archive layout and recovery](date-archive-migration.md)
+- [Endpoint-specific RAW tables and recovery](raw-reference-split.md)
 - [Limitations](limitations.md)
 
 ## Verification Results
 
+- [Verified split into endpoint-specific RAW tables](raw-reference-split-results.json)
 - [Verified API-date archive simplification](date-archive-migration-results.json)
 - [Verified Polygon naming and archive migration](polygon-naming-migration-results.json)
 - [Verified S3 dataset-folder migration](s3-layout-migration-results.json)

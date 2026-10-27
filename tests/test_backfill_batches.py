@@ -45,8 +45,8 @@ class BatchLandingTest(unittest.TestCase):
         self.assertTrue(any('DELETE FROM ' in s and '.ADMIN.REFERENCE_MANIFEST' in s for s in self.statements()))
 
     def test_mixed_reference_batch_reads_both_scoped_stages_before_one_transaction(self):
-        self.cursor.fetchall.return_value=[(dt.date(2024,1,2),'polygon_ticker_catalog','test',1),
-                                           (dt.date(2024,1,2),'polygon_ticker_overview','test',1)]
+        self.cursor.fetchall.side_effect=[[(dt.date(2024,1,2),'polygon_ticker_catalog','test',1)],
+                                         [(dt.date(2024,1,2),'polygon_ticker_overview','test',1)]]
         self.run_batch([([{'ticker':'AAA'}],'2024-01-02',source,1)
                         for source in REFERENCE_ARCHIVES])
         sql=self.statements()
@@ -56,6 +56,13 @@ class BatchLandingTest(unittest.TestCase):
         self.assertTrue(any('@MARKET.RAW.POLYGON_COMPANY_OVERVIEW_STAGE' in s for s in copies))
         self.assertEqual(sql.count('BEGIN'),1)
         self.assertTrue(all(sql.index(s)<sql.index('BEGIN') for s in copies))
+        creates=[s for s in sql if s.startswith('CREATE TEMPORARY')]
+        self.assertEqual(len(creates),2)
+        self.assertTrue(any('LIKE MARKET.RAW.TICKER_CATALOG_RAW' in s for s in creates))
+        self.assertTrue(any('LIKE MARKET.RAW.COMPANY_OVERVIEW_RAW' in s for s in creates))
+        inserts=[s for s in sql if s.startswith('INSERT INTO MARKET.RAW.')]
+        self.assertEqual(len(inserts),2)
+        self.assertTrue(all(sql.index('BEGIN') < sql.index(s) < sql.index('COMMIT') for s in inserts))
 
     def test_empty_successful_overview_still_records_manifest(self):
         self.cursor.fetchall.return_value=[]

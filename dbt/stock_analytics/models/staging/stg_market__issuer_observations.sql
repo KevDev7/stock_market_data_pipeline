@@ -3,8 +3,7 @@
 WITH raw AS (
     SELECT API_DATE AS observation_date, INGESTED_AT AS ingested_at, RUN_ID AS run_id,
            RAW_PAYLOAD AS source_payload, TRY_PARSE_JSON(RAW_PAYLOAD) AS payload
-    FROM {{ source('raw_reference', 'REFERENCE_RAW') }}
-    WHERE SOURCE = 'polygon_ticker_overview'
+    FROM {{ source('raw_reference', 'COMPANY_OVERVIEW_RAW') }}
 )
 SELECT
     observation_date,

@@ -72,6 +72,13 @@ alongside unmigrated records. Fresh environments create the manifests in ADMIN.
 The Python reference setup creates its own manifest; the explicit historical
 refresh command creates its refresh manifest when that capability is first used.
 
+Each endpoint has its own active RAW table: `DAILY_STOCKS_RAW`,
+`TICKER_CATALOG_RAW`, and `COMPANY_OVERVIEW_RAW`. If the environment still uses
+the shared `REFERENCE_RAW`, complete the [RAW table split](raw-reference-split.md)
+before ingestion setup. Setup will not silently create empty replacements.
+The retired shared table remains available only for recovery and historical
+backup views; it receives no new loads.
+
 ## Snowflake Key Authentication
 
 Generate an RSA key pair, assign the public key to the Snowflake user, and place

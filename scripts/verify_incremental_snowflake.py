@@ -169,7 +169,7 @@ def verify_corrections(database):
         assert_owned(w.cursor,database)
         compare(w.cursor,database,'BASELINE')
         prices=database+'.RAW.DAILY_STOCKS_RAW'
-        reference=database+'.RAW.REFERENCE_RAW'
+        reference=database+'.RAW.TICKER_CATALOG_RAW'
         manifest=database+'.ADMIN.REFERENCE_MANIFEST'
         w.cursor.execute(f'''SELECT COUNT(*) FROM {reference}
             WHERE TRY_PARSE_JSON(RAW_PAYLOAD):ticker::STRING='ZZPREPUSH' ''')
@@ -197,6 +197,8 @@ def verify_corrections(database):
         overview={'ticker':'ZZPREPUSH','name':catalog['name'],'cik':catalog['cik'],
                   'sic_code':'3571','sic_description':'Fixture industry'}
         for source,payload in [('polygon_ticker_catalog',catalog),('polygon_ticker_overview',overview)]:
+            from src.raw_reference import reference_table
+            reference=reference_table(database,source)
             w.cursor.execute(f'''INSERT INTO {reference}
                 (API_DATE,RUN_ID,SOURCE,RAW_PAYLOAD,INGESTED_AT)
                 VALUES ('2025-12-31','prepush-fixture',%s,%s,CURRENT_TIMESTAMP())''',
@@ -267,7 +269,8 @@ def verify_full_build(database):
     w=SnowflakeClient()
     try:
         assert_owned(w.cursor,database)
-        for table in ['RAW.DAILY_STOCKS_RAW','RAW.REFERENCE_RAW','ADMIN.REFERENCE_MANIFEST']:
+        for table in ['RAW.DAILY_STOCKS_RAW','RAW.TICKER_CATALOG_RAW',
+                      'RAW.COMPANY_OVERVIEW_RAW','ADMIN.REFERENCE_MANIFEST']:
             w.cursor.execute(f'CREATE OR REPLACE TABLE {database}.{table} CLONE MARKET.{table}')
         run_dbt(database,[],full_refresh=True,action='build')
         results=json.loads((ROOT/'.cache'/'prepush'/database/'target'/'run_results.json').read_text())['results']

@@ -33,7 +33,7 @@ class ReferenceSetupTest(unittest.TestCase):
     def configure(self):
         overview = copy.deepcopy(self.stage)
         overview[0][3] = json.dumps(['s3://stock-bucket/company-overview/'])
-        self.cursor.fetchall.side_effect = [self.integration, self.stage, overview, [], []]
+        self.cursor.fetchall.side_effect = [self.integration, self.stage, overview, [], [], []]
 
     def statements(self):
         return [call.args[0] for call in self.cursor.execute.call_args_list]
@@ -49,7 +49,7 @@ class ReferenceSetupTest(unittest.TestCase):
         self.warehouse.setup()
         self.assertTrue(self.statements()[0].startswith('DESC INTEGRATION'))
         self.assertTrue(self.statements()[1].startswith('DESC STAGE'))
-        self.assertEqual(sum(sql.startswith('CREATE TABLE IF NOT EXISTS') for sql in self.statements()), 2)
+        self.assertEqual(sum(sql.startswith('CREATE TABLE IF NOT EXISTS') for sql in self.statements()), 3)
         self.assert_no_infrastructure_mutations()
 
     def test_infrastructure_check_alone_is_read_only(self):

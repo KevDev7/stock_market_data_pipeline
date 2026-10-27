@@ -9,6 +9,7 @@ from src.config import AWS, SNOWFLAKE
 from src.ingestion_metadata import ensure_manifest, require_metadata_migrated
 from src.archive_layout import REFERENCE_ARCHIVES
 from src.provider_names import canonical_source_sql
+from src.raw_reference import COLUMNS, ensure_reference_tables, reference_table
 from src.reference import landing_rows
 from src.s3_client import S3RawClient
 
@@ -77,8 +78,7 @@ class ReferenceWarehouse:
     def setup(self):
         self.check_infrastructure()
         require_metadata_migrated(self.cursor, self.database)
-        self.cursor.execute(f'''CREATE TABLE IF NOT EXISTS {self.database}.RAW.REFERENCE_RAW (
-            API_DATE DATE, RUN_ID STRING, SOURCE STRING, RAW_PAYLOAD STRING, INGESTED_AT TIMESTAMP_NTZ)''')
+        ensure_reference_tables(self.cursor, self.database)
         ensure_manifest(self.cursor, self.database, 'REFERENCE_MANIFEST')
 
     def completed(self, source):
@@ -88,7 +88,7 @@ class ReferenceWarehouse:
     def known_issuers(self):
         self.cursor.execute(f'''SELECT COALESCE(NULLIF(TRY_PARSE_JSON(RAW_PAYLOAD):cik::STRING,''),
             'TICKER:' || TRY_PARSE_JSON(RAW_PAYLOAD):ticker::STRING), MIN(API_DATE)
-            FROM {self.database}.RAW.REFERENCE_RAW WHERE SOURCE='polygon_ticker_overview'
+            FROM {reference_table(self.database, 'polygon_ticker_overview')}
             GROUP BY 1''')
         return {r[0]: str(r[1]) for r in self.cursor.fetchall()}
 
@@ -108,7 +108,8 @@ class ReferenceWarehouse:
         if not re.fullmatch(r'[A-Za-z0-9_./=-]+',stage_path):
             raise ValueError('Unexpected archive key')
         temp = self.database + '.RAW.TMP_REFERENCE_' + uuid.uuid4().hex[:12].upper()
-        self.cursor.execute(f'CREATE TEMPORARY TABLE {temp} LIKE {self.database}.RAW.REFERENCE_RAW')
+        table = reference_table(self.database, source)
+        self.cursor.execute(f'CREATE TEMPORARY TABLE {temp} LIKE {table}')
         try:
             if rows:
                 self.cursor.execute(f'''COPY INTO {temp} (API_DATE,RUN_ID,SOURCE,RAW_PAYLOAD,INGESTED_AT)
@@ -125,9 +126,9 @@ class ReferenceWarehouse:
             if self.cursor.fetchone()[0]:
                 raise ValueError('Archived reference file changed before loading; retry ingestion')
             self.cursor.execute('BEGIN')
-            for table in ['RAW.REFERENCE_RAW','ADMIN.REFERENCE_MANIFEST']:
-                self.cursor.execute(f'DELETE FROM {self.database}.{table} WHERE API_DATE=%s AND SOURCE=%s',(str(date),source))
-            self.cursor.execute(f'INSERT INTO {self.database}.RAW.REFERENCE_RAW SELECT * FROM {temp}')
+            for target in [table, self.database + '.ADMIN.REFERENCE_MANIFEST']:
+                self.cursor.execute(f'DELETE FROM {target} WHERE API_DATE=%s AND SOURCE=%s',(str(date),source))
+            self.cursor.execute(f'INSERT INTO {table} ({COLUMNS}) SELECT {COLUMNS} FROM {temp}')
             self.cursor.execute(f'''INSERT INTO {self.database}.ADMIN.REFERENCE_MANIFEST
                 VALUES (%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP())''',
                 (str(date),source,run_id,len(rows),requested_count if requested_count is not None else len(rows),

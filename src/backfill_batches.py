@@ -17,6 +17,7 @@ from src.reference_load import SOURCES
 from src.archive_layout import REFERENCE_ARCHIVES
 from src.s3_client import S3RawClient
 from src.provider_names import canonical_source_sql
+from src.raw_reference import COLUMNS, reference_table
 
 
 def archive_item(item):
@@ -49,12 +50,14 @@ def land_batch(warehouse, items, prices=False, workers=8, refresh_campaign=None)
             raise ValueError('Invalid source date')
         if prices != (source=='polygon_grouped_daily') or (prices and not records):
             raise ValueError('Mixed or empty price batch')
+        if not prices and source not in SOURCES:
+            raise ValueError('Unknown backfill source')
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
         archived=list(pool.map(archive_item,items))
     database=SNOWFLAKE['database']
     if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*',database):
         raise ValueError('Invalid database')
-    table=database+'.RAW.'+('DAILY_STOCKS_RAW' if prices else 'REFERENCE_RAW')
+    table=database+'.RAW.DAILY_STOCKS_RAW' if prices else None
     by_stage={}
     for entry in archived:
         if prices:
@@ -70,24 +73,33 @@ def land_batch(warehouse, items, prices=False, workers=8, refresh_campaign=None)
         if not re.fullmatch(r'[A-Za-z0-9_./=-]+',path):
             raise ValueError('Invalid archive path')
         if entry['row_count']:
-            by_stage.setdefault(stage, []).append("'"+path+"'")
-    temp=database+'.RAW.TMP_BATCH_'+uuid.uuid4().hex[:12].upper()
+            by_stage.setdefault((entry['source'],stage), []).append("'"+path+"'")
+    sources=list(dict.fromkeys(e['source'] for e in archived))
+    tables={source: table if prices else reference_table(database,source) for source in sources}
+    temps={source: database+'.RAW.TMP_BATCH_'+uuid.uuid4().hex[:12].upper() for source in sources}
+    created=[]
     cur=warehouse.cursor
-    cur.execute('CREATE TEMPORARY TABLE '+temp+' LIKE '+table)
     try:
-        for stage, paths in by_stage.items():
+        for source in sources:
+            cur.execute('CREATE TEMPORARY TABLE '+temps[source]+' LIKE '+tables[source])
+            created.append(temps[source])
+        for (source,stage), paths in by_stage.items():
+            temp=temps[source]
             cur.execute(f'''COPY INTO {temp} (API_DATE,RUN_ID,SOURCE,RAW_PAYLOAD,INGESTED_AT)
                 FROM (SELECT TRY_TO_DATE($1:API_DATE::STRING),$1:RUN_ID::STRING,
                 {canonical_source_sql('$1:SOURCE::STRING')},$1:RAW_PAYLOAD::STRING,TRY_TO_TIMESTAMP_NTZ($1:INGESTED_AT::STRING)
                 FROM @{stage}) FILES=({','.join(paths)})
                 FILE_FORMAT=(TYPE=JSON COMPRESSION=AUTO) ON_ERROR=ABORT_STATEMENT''')
-        cur.execute(f'SELECT API_DATE,SOURCE,RUN_ID,COUNT(*) FROM {temp} GROUP BY 1,2,3')
-        actual={(str(r[0]),r[1],r[2]):r[3] for r in cur.fetchall()}
-        expected={(e['date'],e['source'],e['run_id']):e['row_count'] for e in archived if e['row_count']}
-        if actual!=expected:
-            raise ValueError('Batch archive/warehouse source-date-run count mismatch')
+        for source,temp in temps.items():
+            cur.execute(f'SELECT API_DATE,SOURCE,RUN_ID,COUNT(*) FROM {temp} GROUP BY 1,2,3')
+            actual={(str(r[0]),r[1],r[2]):r[3] for r in cur.fetchall()}
+            expected={(e['date'],e['source'],e['run_id']):e['row_count']
+                      for e in archived if e['row_count'] and e['source']==source}
+            if actual!=expected:
+                raise ValueError('Batch archive/warehouse source-date-run count mismatch')
         cur.execute('BEGIN')
         if prices:
+            temp=temps['polygon_grouped_daily']
             if refresh_campaign:
                 cur.execute(f'DELETE FROM {table} WHERE API_DATE IN (SELECT DISTINCT API_DATE FROM {temp})')
                 cur.execute(f'INSERT INTO {table} SELECT * FROM {temp}')
@@ -110,9 +122,13 @@ def land_batch(warehouse, items, prices=False, workers=8, refresh_campaign=None)
             # Include empty successful observations in the manifest replacement.
             condition=' OR '.join(['(API_DATE=%s AND SOURCE=%s)']*len(archived))
             pairs=[v for e in archived for v in [e['date'],e['source']]]
-            cur.execute(f'DELETE FROM {table} WHERE {condition}',pairs)
+            for source,table in tables.items():
+                subset=[e for e in archived if e['source']==source]
+                scoped=' OR '.join(['(API_DATE=%s AND SOURCE=%s)']*len(subset))
+                params=[v for e in subset for v in [e['date'],e['source']]]
+                cur.execute(f'DELETE FROM {table} WHERE {scoped}',params)
+                cur.execute(f'INSERT INTO {table} ({COLUMNS}) SELECT {COLUMNS} FROM {temps[source]}')
             cur.execute(f'DELETE FROM {database}.ADMIN.REFERENCE_MANIFEST WHERE {condition}',pairs)
-            cur.execute(f'INSERT INTO {table} SELECT * FROM {temp}')
             placeholders=','.join(['(%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP())']*len(archived))
             params=[v for e in archived for v in [e['date'],e['source'],e['run_id'],e['row_count'],
                                                 e['requested'],e['key'],e['sha256']]]
@@ -122,5 +138,6 @@ def land_batch(warehouse, items, prices=False, workers=8, refresh_campaign=None)
         cur.execute('ROLLBACK')
         raise
     finally:
-        cur.execute('DROP TABLE IF EXISTS '+temp)
+        for temp in created:
+            cur.execute('DROP TABLE IF EXISTS '+temp)
     return archived

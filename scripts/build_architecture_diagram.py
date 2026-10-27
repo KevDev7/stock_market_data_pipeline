@@ -266,7 +266,7 @@ def build_diagram():
     d.box("overview-cadence", 410, 808, 245, 84, ["Company Overviews:", "Quarterly + first observed"], fill=YELLOW, stroke="#d4b970", font=16)
 
     # Boxes name logical datasets, not operations or a required table count.
-    # Catalog and overview remain distinct datasets despite shared RAW storage.
+    # Each endpoint has its own RAW table and separately cleaned staging dataset.
     for prefix, x in (("raw", 756), ("stg", 996)):
         for suffix, y, label in (("catalog", 322, "Ticker Catalog"),
                                  ("overview", 394, "Company Overview"),
